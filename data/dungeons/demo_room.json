@@ -1,0 +1,12 @@
+{
+    "id": "demo_room",
+    "name": "Test Room",
+    "rooms": [
+        {
+            "id": "entry",
+            "description": "A bare stone chamber lit by no obvious source.",
+            "exits": []
+        }
+    ],
+    "encounters": ["shade"]
+}

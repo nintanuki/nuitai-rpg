@@ -1,0 +1,7 @@
+{
+    "id": "opening",
+    "lines": [
+        {"speaker": "Narrator", "text": "The chamber is empty."},
+        {"speaker": "Narrator", "text": "There is no one here yet."}
+    ]
+}

@@ -1,0 +1,7 @@
+{
+    "id": "shade",
+    "name": "Shade",
+    "element": "aku",
+    "stats": {"hp": 24, "attack": 6},
+    "loot": []
+}

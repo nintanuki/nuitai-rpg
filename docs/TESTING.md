@@ -28,6 +28,18 @@ python main.py
 11. With a sound registered in `SOUND_EFFECTS` and triggered from `_update_world` or a handler, calling `self.audio.play("name")` plays it; missing keys are silently ignored.
 12. With a music track in `MUSIC_TRACKS`, looping playback starts on boot. `pause_music`, `resume_music`, and `stop_music` behave as advertised. `toggle_mute()` cuts everything (SFX and music) and restoring the mute restarts a random track.
 
+## Layer 0 — engine spike
+
+13. Title screen shows the game title and a menu of `NEW GAME`, `CONTINUE`, `QUIT`. All text is ALL-CAPS regardless of the source string casing.
+14. With no save on disk, `CONTINUE` is dimmed and not selectable. The cursor skips it on Up/Down.
+15. Picking `NEW GAME` enters the test room. The party roster appears in the upper-right corner.
+16. Picking `TALK` opens a bordered text box at the bottom that types its line out at the configured chars-per-second; pressing confirm again advances or fast-forwards.
+17. Picking `FIGHT` enters the battle scene. Party HP and enemy HP are visible. Pressing confirm steps through narration; the battle resolves to victory, defeat, or — on cancel — flee, then returns to the test room.
+18. Picking `SAVE` writes `saves/slot_1.json` and the `Saved.` line appears in the box.
+19. Picking `QUIT TO TITLE` returns to the title screen, and `CONTINUE` is now enabled.
+20. Picking `CONTINUE` restores the previously-saved party (same names appear in the roster).
+21. No `print()` output appears on the console at any point during gameplay.
+
 ## Sign-off
 
 - [ ] Smoke + globals all passed.

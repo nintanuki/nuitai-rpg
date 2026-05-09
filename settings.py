@@ -10,7 +10,7 @@ class ColorSettings:
     BLUE = (0, 0, 255)
 
     BG_COLOR = NERO
-    OVERLAY_BACKGROUND = WHITE
+    OVERLAY_BACKGROUND = BLACK
 
 class ScreenSettings:
     """Class to hold all the settings related to the screen."""
@@ -53,6 +53,13 @@ class FontSettings:
         os.path.dirname(__file__), 'assets', 'font', 'Pixeled.ttf'
     )
 
+    # Pixel-font point sizes. The Pixeled font reads cleanly only at these
+    # ladder rungs; intermediate sizes blur because the glyphs are not
+    # vector-grid-aligned. Add new sizes only by powers-of-two-ish steps.
+    SIZE_SMALL = 12   # Subtle UI like menu hints, status strips.
+    SIZE_BODY = 16    # Default in-game prose (text box, menus).
+    SIZE_HEADING = 24 # Scene titles, character names above text boxes.
+
 class AudioSettings:
     """Global audio toggles, mixer-level defaults, and the sound/music registry.
 
@@ -85,3 +92,53 @@ class AssetPaths:
 
 class DebugSettings:
     """Settings related to debugging features."""
+
+
+class SaveSettings:
+    """Save-system tunables.
+
+    Saves are JSON files written under ``SAVES_DIR``, one file per slot
+    (``slot_<id>.json``). Slot 0 is reserved for autosaves; slots
+    1..MAX_SAVE_SLOTS are player-driven.
+    """
+
+    # __file__-relative so saves live next to the running game regardless
+    # of the working directory the launcher used.
+    SAVES_DIR = os.path.join(os.path.dirname(__file__), 'saves')
+
+    # Player-facing slot count. Slot 0 is reserved for the autosave on top
+    # of this number; the UI will render 1..N + an autosave row.
+    MAX_SAVE_SLOTS = 3
+
+    # Autosave slot id. Must be 0 (reserved); kept as a constant so code
+    # never types the literal.
+    AUTOSAVE_SLOT_ID = 0
+
+
+class UISettings:
+    """Tunables for in-game UI presentation.
+
+    All measurements are in screen pixels unless noted otherwise. Time
+    values are in seconds. Speeds (``*_PER_SECOND``) are rates so they
+    work regardless of frame rate.
+    """
+
+    # Text-box geometry. The dialogue box hugs the bottom of the screen at
+    # this height with this much inner padding before text begins. Border
+    # is the thickness of the rectangle drawn around it.
+    TEXT_BOX_HEIGHT = 160
+    TEXT_BOX_PADDING = 16
+    TEXT_BOX_BORDER_THICKNESS = 3
+
+    # Typewriter rendering speed. Characters are revealed at this rate
+    # while the box is paginating; pressing confirm fast-forwards to the
+    # end of the current page.
+    TYPEWRITER_CHARS_PER_SECOND = 60
+
+    # Menu cursor blink. Two phases per second feels alert without being
+    # distracting; lower for a more sedate cursor.
+    MENU_CURSOR_BLINK_HZ = 2.0
+
+    # Vertical spacing between menu items. Calibrated so SIZE_BODY text
+    # has comfortable headroom without wasting screen real estate.
+    MENU_ITEM_SPACING = 8

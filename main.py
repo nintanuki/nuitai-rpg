@@ -4,8 +4,13 @@ import pygame
 import sys
 
 from crt import CRT
+from core.data_loader import DataLoader
+from core.scene import SceneStack
+from core.scenes.title_scene import TitleScene
 from settings import ScreenSettings, InputSettings, ColorSettings
 from systems.audio_manager import AudioManager
+from systems.party import Party
+
 
 class GameManager:
     """Coordinate game state, flow, rendering phases, and input orchestration."""
@@ -35,6 +40,19 @@ class GameManager:
         self.full_screen = False
         self.crt = CRT(self.screen)
 
+        # Content packs (characters, abilities, enemies, dungeons,
+        # dialogue) are read from ``data/`` on demand and cached. Scenes
+        # reach into this loader rather than re-reading JSON themselves.
+        self.data = DataLoader()
+
+        # Active gameplay state. ``party`` is overwritten by the title
+        # screen when the player picks NEW GAME or CONTINUE; until then it
+        # is an empty roster so save/load code can rely on it being
+        # non-None.
+        self.party: Party = Party()
+        self.scene_stack = SceneStack(self)
+        self.scene_stack.push(TitleScene(self))
+
     def _initialize_audio_mixer(self) -> None:
         """Initialize pygame's mixer once so AudioManager has a backing device."""
         if pygame.mixer.get_init():
@@ -42,7 +60,9 @@ class GameManager:
         try:
             pygame.mixer.init()
         except pygame.error as error:
-            print(f"Audio mixer initialization failed: {error}")
+            # Mixer failures are non-fatal; the game keeps running silently.
+            # Logged via stderr so it never lands in gameplay output.
+            sys.stderr.write(f"Audio mixer initialization failed: {error}\n")
 
     # -------------------------
     # BOOT / SETUP
@@ -119,11 +139,16 @@ class GameManager:
         pass
 
     def _process_events(self) -> None:
-        """Drain pygame's event queue and dispatch by event type."""
+        """Drain pygame's event queue and dispatch by event type.
+
+        Global handlers (quit, fullscreen) run first; the same event is
+        then forwarded to the active scene so it can react.
+        """
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.close_game()
-            elif event.type == pygame.KEYDOWN:
+                continue
+            if event.type == pygame.KEYDOWN:
                 self._handle_keydown(event)
             elif event.type == pygame.JOYBUTTONDOWN:
                 self._handle_joybuttondown(event)
@@ -131,16 +156,20 @@ class GameManager:
                 self._handle_joyhatmotion(event)
             elif event.type == pygame.JOYAXISMOTION:
                 self._handle_joyaxismotion(event)
+            self.scene_stack.handle_event(event)
 
     # -------------------------
     # MAIN LOOP
     # -------------------------
 
-    def _update_world(self) -> None:
-        pass
+    def _update_world(self, dt: float) -> None:
+        """Advance the active scene by ``dt`` seconds."""
+        self.scene_stack.update(dt)
 
     def _render_frame(self) -> None:
+        """Compose one frame: clear, draw scenes, apply CRT pass."""
         self.screen.fill(ColorSettings.BG_COLOR)
+        self.scene_stack.render_all(self.screen)
 
         # Apply CRT pass after world/UI rendering.
         if not self.full_screen:
@@ -151,11 +180,11 @@ class GameManager:
         while True:
             if self.quit_combo_pressed():
                 self.close_game()
+            dt = self.clock.tick(ScreenSettings.FPS) / 1000.0
             self._process_events()
-            self._update_world()
+            self._update_world(dt)
             self._render_frame()
             pygame.display.flip()
-            self.clock.tick(ScreenSettings.FPS)
 
 if __name__ == "__main__":
     game_manager = GameManager()
