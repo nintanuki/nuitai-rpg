@@ -1,0 +1,21 @@
+# Sarpa
+
+Sarpa is the ancient cosmological and religious tradition of the [Bandari](../ethnicity/bandari.md) people, predating [The Teachings of Shaka](../organization/the-teachings-of-shaka.md). It formed the spiritual foundation upon which [Shaka](../person/shaka.md) later built his philosophy.
+
+Sarpa teaches that all existence moves within an endless cycle known as The Spiral, an unbroken chain of life, death, and rebirth. Unlike the monistic [Anúic](../organization/anúa.md) belief of the [Nuitagata](../ethnicity/nuitagata.md), which treats all being as manifestations of a single substance called [Mana](../law/mana.md), Sarpa makes a distinction between **Atoma** and **Kolindala**.
+
+**Atoma** is the individual soul, the enduring self that is reborn from life to life, carrying merit, memory, and identity through what the Bandari call eternal recurrence. **Kolindala**, by contrast, is the radiant current of magical vitality that permeates the cosmos. It does not reincarnate, nor does it possess selfhood. Instead it is the universal energy that mages, martial artists, and mystics can refine or channel. To the Nuitagata, all of this is Mana.
+
+In Sarpic thought, an Atoma moves through the Spiral within the current of Kolindala, just as a traveler moves within a river: one is the voyager, the other the medium through which passage is made.
+
+The serpent is the central symbol of Sarpa, representing the continuity and sacred movement of life. Snakes are considered holy and protected animals, embodying wisdom, renewal, and the Spiral itself. The faith’s emblem is a serpent coiled in a spiral.
+
+[Matahari](../person/matahari.md), the sun god later associated with Shaka, was once a prominent Sarpic deity. Followers of Sarpa still venerate Matahari as the living sun and do not equate him directly with Shaka. While most Sarpic adherents respect Shaka as a great teacher, they view him as mortal or, in some sects, as an avatar or emanation of Matahari rather than a divine being in his own right.
+
+Sarpa is not a single organized religion but a family of related traditions that revere different deities, known as Devas, from the old Sarpic pantheon. Each denomination focuses on a different Deva and has a different interpretation of their role in the cosmic order. Though the Teachings of Shaka have become the dominant and central faith in Bandari civilization, Sarpic communities persist as minorities, maintaining the older rites, serpent symbolism, and eternal cosmology that once defined ancient Bandari spirituality.
+
+Although ancient Sarpa once employed a caste-like system of social roles, modern Sarpic communities no longer follow it. Followers of Shaka often claim that the abandonment of caste was one of Shaka’s greatest moral victories, but Sarpic adherents reject this interpretation. They argue that the original system was never meant to enforce hereditary hierarchy, but to guide individuals toward roles suited to their character and talents. In their view, it was only later historical distortions that hardened it into a rigid class structure. Contemporary Sarpic orders formally renounce caste as outdated, holding that the ancient ideal was one of balanced contribution rather than inequality.
+
+In the crowded markets of [Kota Emas](../settlement/kota-emas.md), it is common to see Sarpic fortune tellers and snake handlers offering readings of one's destiny within the Spiral. Some read patterns in a serpent’s movements, others read palms or cast die, and a few keep small shrines where passersby ask questions while a sacred snake rests coiled nearby. Sages fall into deep meditation amid swirling incense, interpreting the shapes that form in the drifting smoke. Others use rhythmic drumming or looping dance steps, drawing on [Kolindala](../law/mana.md) to enter a state of trance before giving counsel.
+
+These practices and small performances are part of everyday life for many Sarpic communities, blending spirituality with street spectacle, and earning a living. Yet they sit uneasily with devout followers of Shaka. To them, relying on omens risks clouding moral judgment, and consulting a diviner is sometimes viewed as a quiet breach of Shakan discipline. Even so, the booths remain busy, and people often seek guidance discreetly despite the lingering controversy.

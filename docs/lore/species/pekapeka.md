@@ -1,0 +1,8 @@
+# Pekapeka
+
+The Pekapeka are chiropterans. Small, winged humanoids native to the deep jungles and limestone caverns of the [Makua Archipelago](../location/the-makua-archipelago.md) . Barely half the height of a Nuitai adult, they are covered in fine, dusky fur and possess wide, membranous wings that allow them to glide silently between trees or across cave openings. Enormous dark eyes and long, tufted ears give them a perpetual look of curiosity.
+
+The Pekapeka live in roost-tribes, hanging in clustered groups from the ceilings of vast caverns strung with vines and glowing fungi. They are nocturnal foragers who gather fruit, insects, and cave fish, and they cultivate patches of bioluminescent moss that they harvest for light and trade. Their society is simple but cooperative; they weave small tools from bone and reed, and craft beautiful shell and feather ornaments that they exchange with the Makuan islanders for salt, cloth, and carved idols.
+Communication between Pekapeka and humans is limited to gestures and sound-patterns, soft clicks, hums, and rhythmic wingbeats, yet they understand tone and intention with uncanny intuition. The native Makua Nuitagata regard them with affection and superstition, leaving bowls of sweet fruit at cave mouths as offerings to these charming inhabitants of the haunted isles.
+
+Despite their timid nature, Pekapeka are clever and quick. They can sense vibrations in the air and "see" sound. Though sentient, the Pekapeka are gentle and childlike in spirit. They neither build kingdoms nor wage wars, but fill the dark jungles with soft music and laughter.

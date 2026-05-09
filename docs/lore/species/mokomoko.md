@@ -1,0 +1,3 @@
+# Mokomoko
+
+The **Mokomoko** are a race of small, frilled running lizards native to [The Fire Islands](../location/the-fire-islands.md). Though small and unassuming, the Mokomoko are clever artisans and builders, crafting tools and shelters with remarkable ingenuity. While some Mokomoko tribes are fiercely hostile, most have been known to peacefully coexist and trade with the **Nuitai**, even though direct communication is impossible. Notably, they possess a natural resistance to fire, making them uniquely adapted to their volcanic homeland. With rare exceptions, Mokomoko tend to flee and hide at the slightest hint of danger.

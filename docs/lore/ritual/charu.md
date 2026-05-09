@@ -1,0 +1,5 @@
+# Charu
+
+Charu is a strategy board game invented in Bandar. Popular among the Bandari, one can find old men playing Charu in the parks of Kota Emas, or among bored sailors on long voyages. Unlike Kaigara, in which pieces are placed and stay their to build territory, Charu is played with carved pieces that move around the board attacking other pieces, each piece is unique and has different abilities and possible moves it can make. Players capture their opponents pieces and the game ends when one player captures the opponents "general." The most powerful piece on the board is the Luminary, which can move in any direction and be called back to the board under special circumstances, but is not the piece that decides the game.
+
+Charu is a faster and more dynamic game than Kaigara, and while cheap travel versions are common, one can find expensive and elaborate Charu sets in the noble shops of Kota Emas where pieces are made of marble, obsidian, jade or even gold. A start contrast to games of Kaigara where even the king of the Kame Kingdom is known to play with simple cowrie shells and chalk.

@@ -1,0 +1,3 @@
+# The Witch Doctors
+
+The Ki’Aku Witch Doctors of the Makua Archipelago are master alchemists, perhaps the most gifted in all of Nuitai. Using only what nature provides, such as herbs, minerals, and sea-borne reagents, they can craft elixirs that heal or harm, revive or ruin. Their work blurs the line between life and death. With a mortar, pestle, and bottle, a skilled Witch Doctor can draw a soul back from the brink or brew poisons that bring agony worse than dying. Like the hunters of [The Fire Islands](../location/the-fire-islands.md), the Ki’Aku embrace both creation and destruction, embodying the eternal balance of Mana. Their art is feared but necessary, for in the Makua Archipelago, death is never far away.

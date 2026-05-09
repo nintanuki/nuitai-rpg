@@ -1,0 +1,3 @@
+# Manogata
+
+One of the most terrifying inhabitants of the world of Nuitai are the Manogata, also known as the “Shark People.” They are technically [Ikagata](../species/ikagata.md), fish-people. They are intelligent, with their own spoken language although one has lived long enough to try to learn it, they have clothes and weapons, but no one has been able to make peaceful contact. The Manogata are violent, almost no one who encounters them survives and there is no warning when they attack ships and sailors. They have been known to take people beneath the waves, perhaps to eat them. Thankfully they rarely come ashore, it’s possible they cannot survive above the water for too long.

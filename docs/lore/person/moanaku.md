@@ -1,0 +1,3 @@
+# Moanaku
+
+[Akua](../law/akua.md) of the stormy seas, the underworld, and the mysteries of the depths. His domain is entropy, memory, magic, hidden things, death and decay. It may seem unusual that the god of the ocean and the god of death are one and the same, but consider how treacherous it is to sail the waters of Nuitai. The bottom of the sea is a graveyard. Some believe that the core of the maelstrom, the heart of Moanaku, is a portal to his underworld. Moanaku is not worshiped and revered in the traditional sense, his name carries a solemn weight. He is respected and feared, homage is paid to him, especially by sailors and the callers. We all return to the ocean.

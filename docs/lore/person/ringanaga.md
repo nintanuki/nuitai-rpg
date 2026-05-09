@@ -1,0 +1,5 @@
+# Ringanaga
+
+Perhaps the most striking feature of the Matahari Atoll, is the splendor that is Ringanaga, the gold and white guardian beast of light that can be found flying in the skies above the city of [Kota Emas](../settlement/kota-emas.md). A long sky serpent making patterns and trails as it winds through the sky. It never descends very low or lands, and often disappears in the clouds or among the floating islands. It has always been there and as far as the people of the Matahari Atoll know no one has ever made contact with it. Only with the modern [Bandari](../ethnicity/bandari.md) invention of the telescope has anyone been able to “see it up close” and make out its finer details. It is believed to be a light dragon and a protector of [Kota Emas](../settlement/kota-emas.md), perhaps sent by or an aspect of [Shaka](../person/shaka.md) himself, although it has existed in these skies long before the followers of Shaka arrived in this ocean.
+
+Ringanaga is one of the six great sacred beasts of Nuitai, the guardian and patron deity of Kota Emas and the natural embodiment of **Ra **(Light).

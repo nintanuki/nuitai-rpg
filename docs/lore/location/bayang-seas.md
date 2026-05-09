@@ -1,0 +1,7 @@
+# Bayang Seas
+
+To the southwest of the great maelstrom, west of [The Makua Archipelago](../location/the-makua-archipelago.md) and still under the grey and stormy skies of those islands of death, are the scattered islands and shipwrecks of the [Bayang Seas](../location/bayang-seas.md). This is where the criminal underworld of Nuitai calls its home. Mangroves and swamps can be found all over these islands.
+
+Fancy silks, tea, the practice of bowing, and the reverent teachings of [Shaka](../person/shaka.md) aren’t the only things the [Bandari](../ethnicity/bandari.md) missionaries and merchants have brought with them to Nuitai. With gunpowder, steel and advanced warships naturally come pirates. Pirates that have terrorized the coasts of [Bandar](../organization/bandar.md) have come to find their fortune in the Nuitai islands. It is an open secret that they make their hideouts in the Bayang Seas. They are a diverse group, from every race and background, but all adhere to [Undang Laut](../ritual/undang-laut.md), the pirate code, on pain of death.
+
+Most Bayang Raiders learn and practice the art of [Sila](../technology/sila.md) , [Bandari](../ethnicity/bandari.md) swordplay, but the cheap trick of drawing a pistol while swords are locked are not beneath them. Here also it is rumored that guilds of bandits, assassins and thieves, the [Penyamun](../organization/the-penyamun.md) make these murky waters and marshes their home, if not the sewers of [Kota Emas](../settlement/kota-emas.md) itself.
