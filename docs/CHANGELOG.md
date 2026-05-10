@@ -660,3 +660,19 @@ SOUND_EFFECTS: dict[str, str] = {
 **After:** Documented confirm parity (`A` + `START`), `play_music_track`, and title-scene `waves.ogg` loop behavior.
 **Why:** Keep architecture docs aligned with the implemented input/audio/scene behavior.
 **Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+## 2026-05-10T17:05-04:00 — Yellow menu cursor
+
+**File:** settings.py
+**Lines (at time of edit):** 10-14 (modified)
+**Before:** `ColorSettings` did not define a dedicated yellow color.
+**After:** Added `YELLOW = (255, 220, 0)`.
+**Why:** Provide a shared color constant for cursor styling without introducing magic color tuples in UI modules.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** ui/menu.py
+**Lines (at time of edit):** 125-130 (modified)
+**Before:** Cursor glyph `>` rendered using each row's text color.
+**After:** Cursor glyph `>` now renders with `ColorSettings.YELLOW`; row label colors remain unchanged.
+**Why:** Make the active menu cursor clearly visible and match the requested yellow cursor treatment across all menus.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)

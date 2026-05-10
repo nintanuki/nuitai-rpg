@@ -135,7 +135,7 @@ class Menu:
                     surface,
                     ">",
                     (text_x - UISettings.MENU_LABEL_OFFSET, row_y),
-                    color,
+                    ColorSettings.YELLOW,
                 )
             text_renderer.draw_text(surface, item.label, (text_x, row_y), color)
 
