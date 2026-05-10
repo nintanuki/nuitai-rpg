@@ -537,3 +537,59 @@ self.menu.render(
 ```
 **Why:** Replace centered/derived placement with fixed top-left anchors to match the target composition while preserving existing font sizes and colors.
 **Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+## 2026-05-10 20:45 UTC — Background template system (Ms. Fishy gradient as a reusable scene skin)
+
+**File:** utils/graphics.py
+**Lines (at time of edit):** 1-43 (new file)
+**Before:** (file did not exist)
+**After:** Adds `build_gradient_surface(width, height, color_top, color_bottom)` — a pure helper that pre-renders a vertical linear-gradient `pygame.Surface` row-by-row. Direct port of the helper used by Ms. Fishy's ocean background.
+**Why:** Scenes need a cheap way to paint gradient backdrops without recomputing pixels each frame; cache once at scene construction (or at first render via `utils/backgrounds.py`) and blit on every frame.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** utils/backgrounds.py
+**Lines (at time of edit):** 1-112 (new file)
+**Before:** (file did not exist)
+**After:** Adds `render_scene_background(scene, surface)`, `render_template(name, surface)`, `template_name_for_scene(scene)`, and `clear_cache()`. Caches gradient surfaces keyed by `(template_name, width, height)` so the per-row interpolation runs once. Unknown template names degrade to the configured default rather than crashing.
+**Why:** Drop-in replacement for `surface.fill(BG_COLOR)` at the top of each scene's `render`. The class-name → template mapping in `BackgroundSettings.SCENE_BACKGROUNDS` is the single switchboard for what each scene looks like — no scene code has to change to re-skin one.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** settings.py
+**Lines (at time of edit):** 16-78 (added)
+**Before:** No background-template configuration; scenes called `surface.fill(ColorSettings.BG_COLOR)` directly.
+**After:** Adds `BackgroundSettings` with `SOLID` / `GRADIENT` discriminators, a `TEMPLATES` dict (`ocean`, `midnight`, `dusk`, `ember`, `nero`, `black`), a `SCENE_BACKGROUNDS` scene-class-name → template-name map (defaulting `TitleScene` to `ocean` — the Ms. Fishy gradient), and a `DEFAULT_TEMPLATE` fallback.
+**Why:** Match the Ms. Fishy aqua → navy gradient on the Nuitai title screen while keeping per-scene backgrounds toggleable in one place. Follows the project convention that new unrelated tunables go in a new `*Settings` class.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/title_scene.py
+**Lines (at time of edit):** 17-21, 126 (modified)
+**Before:**
+```python
+from settings import ColorSettings, FontSettings, SaveSettings, ScreenSettings, UISettings
+...
+surface.fill(ColorSettings.BG_COLOR)
+```
+**After:**
+```python
+from settings import ColorSettings, FontSettings, SaveSettings, ScreenSettings, UISettings
+...
+from utils.backgrounds import render_scene_background
+...
+render_scene_background(self, surface)
+```
+**Why:** Apply the configured template (default `ocean` — the Ms. Fishy gradient) instead of a flat fill so the title screen reads as the project's "front cover."
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/test_world_scene.py
+**Lines (at time of edit):** 25-27, 116 (modified)
+**Before:** `surface.fill(ColorSettings.BG_COLOR)` at the top of `render`.
+**After:** `render_scene_background(self, surface)` at the top of `render`; `from utils.backgrounds import render_scene_background` added with the existing UI imports.
+**Why:** Route the test room through the same template system as the title so its background can be toggled from `BackgroundSettings.SCENE_BACKGROUNDS` without touching scene code.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/battle_scene.py
+**Lines (at time of edit):** 26-29, 109 (modified)
+**Before:** `surface.fill(ColorSettings.BG_COLOR)` at the top of `render`.
+**After:** `render_scene_background(self, surface)` at the top of `render`; `from utils.backgrounds import render_scene_background` added with the existing UI imports.
+**Why:** Same as test world — make every opaque scene speak through the template registry so re-skinning is one line in `settings.py`.
+**Editor:** Frankie (Claude Opus 4.7)

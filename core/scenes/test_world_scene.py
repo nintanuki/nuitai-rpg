@@ -24,6 +24,7 @@ from systems.dialogue import DialogueRunner
 from ui import input_map, text_renderer
 from ui.menu import Menu, MenuItem
 from ui.text_box import TextBox
+from utils.backgrounds import render_scene_background
 
 if TYPE_CHECKING:
     from main import GameManager
@@ -113,7 +114,7 @@ class TestWorldScene(Scene):
 
     def render(self, surface: pygame.Surface) -> None:
         """Draw the room label, party roster, command menu, and text box."""
-        surface.fill(ColorSettings.BG_COLOR)
+        render_scene_background(self, surface)
         text_renderer.draw_text(
             surface,
             "Test Room",

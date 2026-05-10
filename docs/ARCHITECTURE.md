@@ -68,6 +68,7 @@ Joysticks are cached at startup in `setup_controllers()`. Hot-plug requires re-r
 | `DebugSettings`  | Debug-only toggles.                                                              |
 | `SaveSettings`   | `SAVES_DIR` (file-relative), `MAX_SAVE_SLOTS`, `AUTOSAVE_SLOT_ID`.                |
 | `UISettings`     | Text-box geometry, typewriter speed, menu cursor blink, menu spacing/alignment, title-screen layout anchors. |
+| `BackgroundSettings` | Named scene-background templates (solid / vertical gradient) and the `SceneClassName → template` mapping consumed by `utils/backgrounds.py`. |
 
 **No magic numbers anywhere outside this file.**
 
@@ -85,6 +86,14 @@ Layer-0 scenes:
 - [core/scenes/test_world_scene.py](../core/scenes/test_world_scene.py) — placeholder room with TALK / FIGHT / SAVE / QUIT TO TITLE commands.
 - [core/scenes/battle_scene.py](../core/scenes/battle_scene.py) — hosts a `Battle` and a `BattleView`; resolves to victory, defeat, or flee.
 - [core/scenes/menu_scene.py](../core/scenes/menu_scene.py) — translucent pause overlay (`OPAQUE = False`) with party / inventory / save / settings / quit-to-title rows.
+
+## 7a. Scene backgrounds — template registry
+
+Every opaque scene paints its backdrop by calling `render_scene_background(self, surface)` from [utils/backgrounds.py](../utils/backgrounds.py) at the top of its `render` method instead of issuing a raw `surface.fill`. The renderer looks up the scene class name in `BackgroundSettings.SCENE_BACKGROUNDS`, resolves it against `BackgroundSettings.TEMPLATES` in [settings.py](../settings.py), and either fills a solid color or blits a cached vertical-gradient surface (built once via `utils.graphics.build_gradient_surface`, then keyed in-memory by `(template_name, width, height)`).
+
+To re-skin a scene, change one line in `SCENE_BACKGROUNDS`. To add a new look, add one entry to `TEMPLATES` — supported shapes are `(SOLID, (r, g, b))` and `(GRADIENT, (r, g, b), (r, g, b))`. Layer 1 will likely add a third (image-backed) shape; the renderer's `kind`-switch is the seam to extend.
+
+The translucent pause overlay (`MenuScene`, `OPAQUE = False`) deliberately skips this path: it renders over the scene beneath it, so it has no background of its own.
 
 ## 8. Element system — single source of truth
 
@@ -166,6 +175,8 @@ ui/
   battle_view.py                Battle event → text box bridge.
   input_map.py                  Raw event → logical UI action helpers.
 utils/
+  graphics.py                   Pure pygame helpers (vertical-gradient surface builder).
+  backgrounds.py                Scene-background template renderer + gradient cache.
   split_loredump.py             One-shot tool: split LOREDUMP.html into per-article HTML stubs.
   lore_to_markdown.py           One-shot tool: convert per-article HTML stubs to clean Markdown.
 data/

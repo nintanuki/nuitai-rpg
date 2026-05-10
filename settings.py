@@ -13,6 +13,70 @@ class ColorSettings:
     BG_COLOR = NERO
     OVERLAY_BACKGROUND = BLACK
 
+class BackgroundSettings:
+    """Named scene-background templates and per-scene assignments.
+
+    A *template* describes how a scene's empty backdrop is drawn — usually
+    a solid fill or a vertical gradient. Scenes look up their template
+    through ``SCENE_BACKGROUNDS`` (keyed by the scene class name) and fall
+    back to ``DEFAULT_TEMPLATE`` when unmapped.
+
+    To re-skin a scene, edit ``SCENE_BACKGROUNDS`` only — no scene code
+    has to change. To add a new look across the project, add a new entry
+    to ``TEMPLATES``.
+
+    Template shapes:
+        ("solid", (r, g, b))                       — flat color fill.
+        ("gradient", (r, g, b), (r, g, b))         — vertical gradient
+            interpolated top → bottom.
+    """
+
+    # SOLID is the discriminator string for flat-fill templates;
+    # GRADIENT for top-to-bottom interpolated templates. Kept as
+    # constants so call sites never type the literal.
+    SOLID = "solid"
+    GRADIENT = "gradient"
+
+    # Built-in templates. Add freely; each name is a stable handle that
+    # ``SCENE_BACKGROUNDS`` and any future settings UI can reference.
+    # Color tuples are RGB in 0..255.
+    TEMPLATES: dict = {
+        # Sunlit aqua surface fading to deep-ocean navy — the Ms. Fishy
+        # backdrop reused here for any underwater / open-sea feel.
+        "ocean": (GRADIENT, (60, 180, 210), (10, 30, 70)),
+        # Indigo night fading to true black; good for somber title cards
+        # and pre-dawn world rooms.
+        "midnight": (GRADIENT, (20, 20, 60), (0, 0, 0)),
+        # Plum dusk fading to deep violet; warmer alternative to
+        # midnight for menus that want some color.
+        "dusk": (GRADIENT, (120, 60, 100), (20, 10, 40)),
+        # Volcanic top fading to ember bottom — for fire-island and
+        # battle scenes that want heat without changing the layout.
+        "ember": (GRADIENT, (200, 80, 30), (60, 10, 10)),
+        # Flat fills — keep these around so the system can express the
+        # game's pre-template look without special-casing scenes.
+        "nero": (SOLID, (30, 30, 30)),
+        "black": (SOLID, (0, 0, 0)),
+    }
+
+    # Which template each scene uses. Keys are scene class names so the
+    # renderer can look up by ``type(scene).__name__`` without scenes
+    # having to declare anything. Unlisted scenes use ``DEFAULT_TEMPLATE``.
+    SCENE_BACKGROUNDS: dict = {
+        "TitleScene": "ocean",
+        "TestWorldScene": "nero",
+        "BattleScene": "nero",
+        # ``MenuScene`` is a translucent overlay (``OPAQUE = False``) and
+        # does not paint its own background, so this entry is advisory
+        # for future opaque variants only.
+        "MenuScene": "nero",
+    }
+
+    # Fallback template name when a scene has no entry above. Must be a
+    # key in ``TEMPLATES``.
+    DEFAULT_TEMPLATE: str = "nero"
+
+
 class ScreenSettings:
     """Class to hold all the settings related to the screen."""
     WIDTH = 800

@@ -18,6 +18,7 @@ from settings import ColorSettings, FontSettings, SaveSettings, ScreenSettings, 
 from systems.party import Party
 from ui import input_map, text_renderer
 from ui.menu import Menu, MenuItem
+from utils.backgrounds import render_scene_background
 
 if TYPE_CHECKING:
     from main import GameManager
@@ -123,7 +124,7 @@ class TitleScene(Scene):
         Args:
             surface: The screen surface to draw on.
         """
-        surface.fill(ColorSettings.BG_COLOR)
+        render_scene_background(self, surface)
 
         text_renderer.draw_text(
             surface,

@@ -26,6 +26,7 @@ from systems.battle import Battle, Combatant
 from ui import input_map, text_renderer
 from ui.battle_view import BattleView
 from ui.text_box import TextBox
+from utils.backgrounds import render_scene_background
 
 if TYPE_CHECKING:
     from main import GameManager
@@ -106,7 +107,7 @@ class BattleScene(Scene):
 
     def render(self, surface: pygame.Surface) -> None:
         """Draw a barebones combat HUD plus the text box."""
-        surface.fill(ColorSettings.BG_COLOR)
+        render_scene_background(self, surface)
         text_renderer.draw_text(
             surface,
             "Battle",
