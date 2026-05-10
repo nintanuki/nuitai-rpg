@@ -62,12 +62,12 @@ Joysticks are cached at startup in `setup_controllers()`. Hot-plug requires re-r
 | `ColorSettings`  | Named colors + semantic aliases (`BG_COLOR`, `OVERLAY_BACKGROUND`).              |
 | `ScreenSettings` | Resolution, FPS, title, CRT alpha range and scanline height.                     |
 | `InputSettings`  | Controller button/axis indices + quit combo + analog threshold.                  |
-| `FontSettings`   | Font file paths and `SIZE_SMALL` / `SIZE_BODY` / `SIZE_HEADING` rungs.            |
+| `FontSettings`   | Font file paths and size rungs (`SIZE_SMALL`, `SIZE_BODY`, `SIZE_HEADING`, title-screen heading size). |
 | `AudioSettings`  | Mute toggles, music + SFX volume, `SOUND_EFFECTS` and `MUSIC_TRACKS` registry.   |
 | `AssetPaths`     | Asset file paths for non-font assets.                                            |
 | `DebugSettings`  | Debug-only toggles.                                                              |
 | `SaveSettings`   | `SAVES_DIR` (file-relative), `MAX_SAVE_SLOTS`, `AUTOSAVE_SLOT_ID`.                |
-| `UISettings`     | Text-box geometry, typewriter speed, menu cursor blink, menu item spacing.       |
+| `UISettings`     | Text-box geometry, typewriter speed, menu cursor blink, menu spacing/alignment, title-screen layout anchors. |
 
 **No magic numbers anywhere outside this file.**
 
@@ -81,7 +81,7 @@ A `Scene` ([core/scene.py](../core/scene.py)) is one screenful of game state —
 
 Layer-0 scenes:
 
-- [core/scenes/title_scene.py](../core/scenes/title_scene.py) — NEW GAME / CONTINUE / QUIT. CONTINUE is disabled when no save exists.
+- [core/scenes/title_scene.py](../core/scenes/title_scene.py) — NEW GAME / CONTINUE / LOAD GAME / QUIT. CONTINUE and LOAD GAME are disabled when no save exists.
 - [core/scenes/test_world_scene.py](../core/scenes/test_world_scene.py) — placeholder room with TALK / FIGHT / SAVE / QUIT TO TITLE commands.
 - [core/scenes/battle_scene.py](../core/scenes/battle_scene.py) — hosts a `Battle` and a `BattleView`; resolves to victory, defeat, or flee.
 - [core/scenes/menu_scene.py](../core/scenes/menu_scene.py) — translucent pause overlay (`OPAQUE = False`) with party / inventory / save / settings / quit-to-title rows.

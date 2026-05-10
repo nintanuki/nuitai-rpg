@@ -10,7 +10,7 @@ python main.py
 ## Smoke
 
 1. Boot: window opens at the resolution defined by `ScreenSettings.RESOLUTION`, no console errors.
-2. The title bar shows `ScreenSettings.TITLE`.
+2. The title bar shows `ScreenSettings.WINDOW_TITLE`.
 3. The background is `ColorSettings.BG_COLOR`.
 4. The CRT overlay is visible (scanlines + slight flicker).
 
@@ -30,8 +30,8 @@ python main.py
 
 ## Layer 0 — engine spike
 
-13. Title screen shows the game title and a menu of `NEW GAME`, `CONTINUE`, `QUIT`. All text is ALL-CAPS regardless of the source string casing.
-14. With no save on disk, `CONTINUE` is dimmed and not selectable. The cursor skips it on Up/Down.
+13. Title screen shows the game title and a menu of `NEW GAME`, `CONTINUE`, `LOAD GAME`, `QUIT`. All text is ALL-CAPS regardless of the source string casing.
+14. With no save on disk, `CONTINUE` and `LOAD GAME` are dimmed and not selectable. The cursor skips them on Up/Down.
 15. Picking `NEW GAME` enters the test room. The party roster appears in the upper-right corner.
 16. Picking `TALK` opens a bordered text box at the bottom that types its line out at the configured chars-per-second; pressing confirm again advances or fast-forwards.
 17. Picking `FIGHT` enters the battle scene. Party HP and enemy HP are visible. Pressing confirm steps through narration; the battle resolves to victory, defeat, or — on cancel — flee, then returns to the test room.

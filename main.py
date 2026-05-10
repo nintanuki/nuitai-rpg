@@ -25,7 +25,7 @@ class GameManager:
         pygame.init()
         self._initialize_audio_mixer()
         self.screen = pygame.display.set_mode(ScreenSettings.RESOLUTION, pygame.SCALED)
-        pygame.display.set_caption(ScreenSettings.TITLE)
+        pygame.display.set_caption(ScreenSettings.WINDOW_TITLE)
         if start_fullscreen:
             pygame.display.toggle_fullscreen()
         self.clock = pygame.time.Clock()

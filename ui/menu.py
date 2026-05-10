@@ -81,10 +81,20 @@ class Menu:
         self,
         surface: pygame.Surface,
         position: tuple[int, int],
+        centered: bool = False,
+        item_spacing: int | None = None,
     ) -> None:
-        """Draw the menu starting at ``position`` (top-left of the first row)."""
+        """Draw the menu starting at ``position``.
+
+        Args:
+            surface: The target render surface.
+            position: Anchor position in pixels.
+            centered: If True, each row label is centered on ``position[0]``.
+            item_spacing: Optional per-render row gap in pixels.
+        """
         font = text_renderer.get_font(FontSettings.SIZE_BODY)
-        line_height = font.get_linesize() + UISettings.MENU_ITEM_SPACING
+        spacing = UISettings.MENU_ITEM_SPACING if item_spacing is None else item_spacing
+        line_height = font.get_linesize() + spacing
         x, y = position
 
         # Cursor blink derived from wall time so the menu doesn't have to
@@ -94,11 +104,20 @@ class Menu:
         )
 
         for index, item in enumerate(self.items):
-            color = ColorSettings.WHITE if item.enabled else ColorSettings.NERO
+            color = ColorSettings.WHITE if item.enabled else ColorSettings.GRAY
             row_y = y + index * line_height
+            text_x = x
+            if centered:
+                label_width = font.size(item.label.upper())[0]
+                text_x = x - (label_width // 2)
             if index == self.cursor and cursor_visible:
-                text_renderer.draw_text(surface, ">", (x, row_y), color)
-            text_renderer.draw_text(surface, item.label, (x + 24, row_y), color)
+                text_renderer.draw_text(
+                    surface,
+                    ">",
+                    (text_x - UISettings.MENU_LABEL_OFFSET, row_y),
+                    color,
+                )
+            text_renderer.draw_text(surface, item.label, (text_x, row_y), color)
 
     # ------------------------------------------------------------------
     # INTERNALS

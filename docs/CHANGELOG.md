@@ -208,7 +208,7 @@ template below, with one `**File:** ... **Why:** ...` block per file touched.
 **Why:** Project is no longer a template; the placeholder was stale.
 **Editor:** Bryan (Claude Opus 4.7)
 
-## 2026-05-09T16:30-04:00 — Pass 2: lore HTML -> Markdown
+## 2026-05-09T16:30-04:00 ï¿½ Pass 2: lore HTML -> Markdown
 
 **File:** utils/lore_to_markdown.py
 **Lines (at time of edit):** (new file)
@@ -236,7 +236,7 @@ template below, with one `**File:** ... **Why:** ...` block per file touched.
 **Lines (at time of edit):** 50-60 (modified), 95-145 (new)
 **Before:** `FontSettings` had only the `FONT` path; `SaveSettings` and `UISettings` did not exist.
 **After:** Added `FontSettings.SIZE_SMALL` (12), `SIZE_BODY` (16), `SIZE_HEADING` (24); added `SaveSettings` (`SAVES_DIR`, `MAX_SAVE_SLOTS = 3`, `AUTOSAVE_SLOT_ID = 0`) and `UISettings` (text-box geometry, typewriter speed, menu cursor blink, item spacing).
-**Why:** Layer 0 needs centralized text sizing, save-system tunables, and UI-widget tunables — copilot-instructions: no magic numbers outside `settings.py`.
+**Why:** Layer 0 needs centralized text sizing, save-system tunables, and UI-widget tunables ï¿½ copilot-instructions: no magic numbers outside `settings.py`.
 **Editor:** Bryan (Claude Opus 4.7)
 
 **File:** core/elements.py
@@ -308,7 +308,7 @@ template below, with one `**File:** ... **Why:** ...` block per file touched.
 **File:** systems/battle.py
 **Lines (at time of edit):** (new file)
 **After:** `Combatant` (id, name, hp, attack, element, is_party). `Battle(party, enemies)` with round-robin turn order; `step()` returns the events for one turn (TurnStart -> Attack -> Damage -> optional Defeated -> optional BattleEnded). `flee()` ends with outcome `"flee"`. Damage = `max(1, int(attack * damage_multiplier(actor.element, target.element)))`.
-**Why:** Pure data; emits events; never draws. The Layer-0 simulation is intentionally minimal — Layer 1 plugs command selection and abilities on top of the same event stream.
+**Why:** Pure data; emits events; never draws. The Layer-0 simulation is intentionally minimal ï¿½ Layer 1 plugs command selection and abilities on top of the same event stream.
 **Editor:** Bryan (Claude Opus 4.7)
 
 **File:** systems/dialogue.py
@@ -386,12 +386,12 @@ template below, with one `**File:** ... **Why:** ...` block per file touched.
 **Why:** All Layer-0 items are landed and verified end-to-end (NEW GAME -> FIGHT -> SAVE -> QUIT TO TITLE -> CONTINUE round-trip passes in headless smoke test).
 **Editor:** Bryan (Claude Opus 4.7)
 
-## 2026-05-09T17:30-04:00 — Layer 0.5 scaffolding pass
+## 2026-05-09T17:30-04:00 ï¿½ Layer 0.5 scaffolding pass
 
 **File:** data/characters/{kailo,hina,tawiri}.json, data/abilities/firebolt.json, data/enemies/shade.json, data/dungeons/demo_room.json, data/dialogue/opening.json
 **Lines (at time of edit):** (new files)
 **After:** One worked example per content-pack subfolder, each with the schema fields described in `data/README.md`.
-**Why:** Layer-0 acceptance criterion ("at least one example each of: character JSON, ability JSON, enemy JSON, dialogue JSON") was technically unmet — schemas were prose-only. Schema-by-example gives weaker contributors a file they can copy and edit.
+**Why:** Layer-0 acceptance criterion ("at least one example each of: character JSON, ability JSON, enemy JSON, dialogue JSON") was technically unmet ï¿½ schemas were prose-only. Schema-by-example gives weaker contributors a file they can copy and edit.
 **Editor:** Bryan (Claude Opus 4.7)
 
 **File:** core/factories.py
@@ -431,17 +431,109 @@ template below, with one `**File:** ... **Why:** ...` block per file touched.
 **File:** docs/CONTRIBUTING.md
 **Lines (at time of edit):** (new file)
 **After:** "How to add X" lookup table mapping every kind of change to the file to edit and an existing file to imitate.
-**Why:** `copilot-instructions.md` defines rules and `ARCHITECTURE.md` describes shape; neither answers "I want to add an ability — what files do I touch?". One short table closes the gap.
+**Why:** `copilot-instructions.md` defines rules and `ARCHITECTURE.md` describes shape; neither answers "I want to add an ability ï¿½ what files do I touch?". One short table closes the gap.
 **Editor:** Bryan (Claude Opus 4.7)
 
 **File:** docs/TODO.md
-**Lines (at time of edit):** new "Layer 0.5 — Scaffolding deferrals" section
+**Lines (at time of edit):** new "Layer 0.5 ï¿½ Scaffolding deferrals" section
 **After:** Tracks scene-stack save persistence, status-effect stub, headless smoke test, `.gitignore copy` cleanup, and writing-pipeline templates.
 **Why:** Real items identified during the close-of-Layer-0 audit; not blockers for Layer 1, but worth holding visible.
 **Editor:** Bryan (Claude Opus 4.7)
 
 **File:** docs/ARCHITECTURE.md
-**Lines (at time of edit):** §1, §11, §14
-**After:** Notes that `GameManager` owns the shared `DataLoader`. §11 expanded to describe `core/factories.py` as the JSON-to-runtime seam. Source tree adds `factories.py`.
+**Lines (at time of edit):** ï¿½1, ï¿½11, ï¿½14
+**After:** Notes that `GameManager` owns the shared `DataLoader`. ï¿½11 expanded to describe `core/factories.py` as the JSON-to-runtime seam. Source tree adds `factories.py`.
 **Why:** Doc must reflect the code as it exists.
 **Editor:** Bryan (Claude Opus 4.7)
+
+## 2026-05-10T16:20-04:00 â€” Title screen menu + centering controls
+
+**File:** settings.py
+**Lines (at time of edit):** 64, 150, 153-154 (modified)
+**Before:** Title text used `FontSettings.SIZE_HEADING`; menu cursor/text offset was hardcoded in `ui/menu.py`; title-screen vertical anchors were literal values in `core/scenes/title_scene.py`.
+**After:** Added `FontSettings.SIZE_TITLE_SCREEN_HEADING`, `UISettings.MENU_LABEL_OFFSET`, `UISettings.TITLE_SCREEN_HEADING_Y`, and `UISettings.TITLE_SCREEN_MENU_TOP_Y`.
+**Why:** Gives the title-screen heading size and title/menu layout dedicated constants so they can be tuned without affecting other scenes.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** core/scenes/title_scene.py
+**Lines (at time of edit):** 62-74, 128-142 (modified)
+**Before:** Menu rows were left-positioned and title text used a non-centered anchor. Menu offered `NEW GAME`, `CONTINUE`, `QUIT`.
+**After:** Title menu now offers `NEW GAME`, `CONTINUE`, `LOAD GAME`, `QUIT`; `CONTINUE` and `LOAD GAME` are disabled when no save slots exist. Title heading width is measured and centered horizontally; title menu rendering is centered horizontally.
+**Why:** Matches requested title-menu composition and centered layout while preserving existing scene flow.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** ui/menu.py
+**Lines (at time of edit):** 80-118 (modified)
+**Before:** `render(surface, position)` always left-aligned rows and used a hardcoded `x + 24` label offset.
+**After:** `render(surface, position, centered=False)` supports per-row horizontal centering when requested. Cursor offset now uses `UISettings.MENU_LABEL_OFFSET`.
+**Why:** Lets title screen center menu options without changing alignment behavior in other menus.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** docs/ARCHITECTURE.md
+**Lines (at time of edit):** 65, 70, 84 (modified)
+**Before:** Font/UI settings and title-scene description did not mention title-screen-specific size/layout controls or `LOAD GAME`.
+**After:** Updated settings table to include title-screen size/layout responsibilities and updated title-scene bullet to `NEW GAME / CONTINUE / LOAD GAME / QUIT` with disabled-state behavior.
+**Why:** Keep architecture docs in sync with the current code.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** docs/TESTING.md
+**Lines (at time of edit):** 13, 33-34 (modified)
+**Before:** Smoke checks referenced `ScreenSettings.TITLE` and a title menu without `LOAD GAME`.
+**After:** Smoke checks now reference `ScreenSettings.WINDOW_TITLE` and assert `LOAD GAME` presence + disabled behavior alongside `CONTINUE`.
+**Why:** Keep manual test expectations aligned with implemented behavior.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+## 2026-05-10T16:36-04:00 â€” Title screen left-anchor positioning pass
+
+**File:** settings.py
+**Lines (at time of edit):** 156-160 (modified)
+**Before:**
+```python
+# Title-screen layout anchors in pixels from the top of the screen.
+TITLE_SCREEN_HEADING_Y = 150
+TITLE_SCREEN_MENU_TOP_Y = 200
+```
+**After:**
+```python
+# Title-screen layout anchors in pixels from the top-left corner.
+TITLE_SCREEN_HEADING_X = 90
+TITLE_SCREEN_HEADING_Y = 90
+TITLE_SCREEN_MENU_X = 90
+TITLE_SCREEN_MENU_TOP_Y = 290
+```
+**Why:** Add explicit X/Y anchor constants so title/menu placement can match the requested left-aligned mockup without touching colors or fonts.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** core/scenes/title_scene.py
+**Lines (at time of edit):** 128-140 (modified)
+**Before:**
+```python
+heading_width = heading_font.size(ScreenSettings.TITLE_SCREEN_HEADING.upper())[0]
+heading_x = (ScreenSettings.WIDTH - heading_width) // 2
+
+self.menu.render(
+  surface,
+  (ScreenSettings.WIDTH // 4, menu_top_y),
+  centered=True,
+  item_spacing=UISettings.TITLE_SCREEN_MENU_ITEM_SPACING,
+)
+```
+**After:**
+```python
+text_renderer.draw_text(
+  surface,
+  ScreenSettings.TITLE_SCREEN_HEADING,
+  (UISettings.TITLE_SCREEN_HEADING_X, UISettings.TITLE_SCREEN_HEADING_Y),
+  color=ColorSettings.WHITE,
+  size=FontSettings.SIZE_TITLE_SCREEN_HEADING,
+)
+
+self.menu.render(
+  surface,
+  (UISettings.TITLE_SCREEN_MENU_X, UISettings.TITLE_SCREEN_MENU_TOP_Y),
+  centered=False,
+  item_spacing=UISettings.TITLE_SCREEN_MENU_ITEM_SPACING,
+)
+```
+**Why:** Replace centered/derived placement with fixed top-left anchors to match the target composition while preserving existing font sizes and colors.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)

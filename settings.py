@@ -4,6 +4,7 @@ class ColorSettings:
     """Class to hold all the color settings for the game."""
     BLACK = (0, 0, 0)
     NERO = (30, 30, 30)
+    GRAY = (120, 120, 120)
     WHITE = (255, 255, 255)
     RED = (255, 0, 0)
     GREEN = (0, 255, 0)
@@ -20,7 +21,8 @@ class ScreenSettings:
     FPS = 60
     CRT_ALPHA_RANGE = (75, 90)
     CRT_SCANLINE_HEIGHT = 3
-    TITLE = "Nuitai RPG"
+    WINDOW_TITLE = "Nuitai RPG"
+    TITLE_SCREEN_HEADING = "Nuitai"
 
 class InputSettings:
     """Controller button and axis mappings used by gameplay and menus.
@@ -59,6 +61,7 @@ class FontSettings:
     SIZE_SMALL = 12   # Subtle UI like menu hints, status strips.
     SIZE_BODY = 16    # Default in-game prose (text box, menus).
     SIZE_HEADING = 24 # Scene titles, character names above text boxes.
+    SIZE_TITLE_SCREEN_HEADING = 72  # Main title text on the title screen.
 
 class AudioSettings:
     """Global audio toggles, mixer-level defaults, and the sound/music registry.
@@ -88,6 +91,16 @@ class AssetPaths:
     # (e.g. when launched from the arcade cabinet launcher).
     TV = os.path.join(
         os.path.dirname(__file__), 'assets', 'graphics', 'effects', 'tv.png'
+    )
+
+    WAVES_SOUND = os.path.join(
+        os.path.dirname(__file__), 'assets', 'audio', 'sound', 'waves.ogg'
+    )
+    MENU_MOVE_SOUND = os.path.join(
+        os.path.dirname(__file__), 'assets', 'audio', 'sound', 'sfx_menu_move2.ogg'
+    )
+    MENU_SELECT_SOUND = os.path.join(
+        os.path.dirname(__file__), 'assets', 'audio', 'sound', 'sfx_menu_select3.ogg'
     )
 
 class DebugSettings:
@@ -142,3 +155,16 @@ class UISettings:
     # Vertical spacing between menu items. Calibrated so SIZE_BODY text
     # has comfortable headroom without wasting screen real estate.
     MENU_ITEM_SPACING = 8
+
+    # Title menu uses a tighter gap so the first item clears the heading
+    # while the bottom row stays anchored visually.
+    TITLE_SCREEN_MENU_ITEM_SPACING = 4
+
+    # Horizontal gap in pixels between the menu cursor and label text.
+    MENU_LABEL_OFFSET = 24
+
+    # Title-screen layout anchors in pixels from the top-left corner.
+    TITLE_SCREEN_HEADING_X = 90
+    TITLE_SCREEN_HEADING_Y = 90
+    TITLE_SCREEN_MENU_X = 90
+    TITLE_SCREEN_MENU_TOP_Y = 290
