@@ -1,6 +1,6 @@
 # Nuitai RPG
 
-A turn-based, sprite-based JRPG set in the world of **Nuitai**, an ocean planet of scattered islands that spiral around a permanent maelstrom, where magic is motion and every fighter draws on two of six elements.
+A turn-based, sprite-based JRPG set in the world of **Nuitai**, an ocean planet of scattered islands that spiral around a permanent maelstrom, where magic is cast by motion and every fighter draws on two of six elements.
 
 Long-term inspirations: *Chrono Trigger*, *Final Fantasy IV*, *Dragon Quest*. The eventual target is a complete SNES-style 2D JRPG with hand-drawn pixel art and an original score, all created by the author without using free assets.
 
