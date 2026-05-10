@@ -142,8 +142,15 @@ class AudioSettings:
     SFX_VOLUME = 1.0  # Sound effect volume in the range [0.0, 1.0].
 
     # Logical name -> filesystem path. Keys are what gameplay code passes to
-    # ``AudioManager.play(name)``. Empty by default; populate per-project.
-    SOUND_EFFECTS: dict[str, str] = {}
+    # ``AudioManager.play(name)``.
+    SOUND_EFFECTS: dict[str, str] = {
+        "menu_move": os.path.join(
+            os.path.dirname(__file__), 'assets', 'audio', 'sound', 'sfx_menu_move2.ogg'
+        ),
+        "menu_select": os.path.join(
+            os.path.dirname(__file__), 'assets', 'audio', 'sound', 'sfx_menu_select3.ogg'
+        ),
+    }
 
     # Background tracks; one is chosen at random each time music starts,
     # avoiding back-to-back repeats. Empty by default.

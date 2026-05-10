@@ -102,11 +102,14 @@ class TestWorldScene(Scene):
                 self.text_box.advance()
             return
         if input_map.is_up(event):
-            self.menu.move_up()
+            if self.menu.move_up():
+                self.gm.audio.play("menu_move")
         elif input_map.is_down(event):
-            self.menu.move_down()
+            if self.menu.move_down():
+                self.gm.audio.play("menu_move")
         elif input_map.is_confirm(event):
-            self.menu.confirm()
+            if self.menu.confirm():
+                self.gm.audio.play("menu_select")
 
     def update(self, dt: float) -> None:
         """Tick the typewriter effect."""

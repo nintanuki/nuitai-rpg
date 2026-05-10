@@ -53,25 +53,45 @@ class Menu:
     # NAVIGATION
     # ------------------------------------------------------------------
 
-    def move_up(self) -> None:
-        """Move the cursor to the previous enabled row, wrapping."""
-        self._step(-1)
+    def move_up(self) -> bool:
+        """Move the cursor to the previous enabled row, wrapping.
 
-    def move_down(self) -> None:
-        """Move the cursor to the next enabled row, wrapping."""
-        self._step(1)
+        Returns:
+            True when the cursor moved; False otherwise.
+        """
+        return self._step(-1)
 
-    def confirm(self) -> None:
-        """Fire the currently-selected row's callback if it's enabled."""
+    def move_down(self) -> bool:
+        """Move the cursor to the next enabled row, wrapping.
+
+        Returns:
+            True when the cursor moved; False otherwise.
+        """
+        return self._step(1)
+
+    def confirm(self) -> bool:
+        """Fire the currently-selected row's callback if it's enabled.
+
+        Returns:
+            True if a callback fired; False otherwise.
+        """
         if 0 <= self.cursor < len(self.items):
             item = self.items[self.cursor]
             if item.enabled:
                 item.on_select()
+                return True
+        return False
 
-    def cancel(self) -> None:
-        """Fire ``on_cancel`` if one was provided."""
+    def cancel(self) -> bool:
+        """Fire ``on_cancel`` if one was provided.
+
+        Returns:
+            True if the cancel callback fired; False otherwise.
+        """
         if self.on_cancel is not None:
             self.on_cancel()
+            return True
+        return False
 
     # ------------------------------------------------------------------
     # FRAME
@@ -130,12 +150,14 @@ class Menu:
                 return index
         return 0
 
-    def _step(self, direction: int) -> None:
+    def _step(self, direction: int) -> bool:
         """Move the cursor by ``direction`` rows, skipping disabled items."""
         if not self.items:
-            return
+            return False
+        original_cursor = self.cursor
         n = len(self.items)
         for _ in range(n):
             self.cursor = (self.cursor + direction) % n
             if self.items[self.cursor].enabled:
-                return
+                return self.cursor != original_cursor
+        return False

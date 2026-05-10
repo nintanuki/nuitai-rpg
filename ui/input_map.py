@@ -24,7 +24,10 @@ def is_confirm(event: pygame.event.Event) -> bool:
     """Return True if ``event`` is a confirm press (Enter / Z / Space / A button)."""
     if event.type == pygame.KEYDOWN and event.key in CONFIRM_KEYS:
         return True
-    if event.type == pygame.JOYBUTTONDOWN and event.button == InputSettings.JOY_BUTTON_A:
+    if event.type == pygame.JOYBUTTONDOWN and event.button in (
+        InputSettings.JOY_BUTTON_A,
+        InputSettings.JOY_BUTTON_START,
+    ):
         return True
     return False
 

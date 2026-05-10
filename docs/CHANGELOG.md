@@ -593,3 +593,70 @@ render_scene_background(self, surface)
 **After:** `render_scene_background(self, surface)` at the top of `render`; `from utils.backgrounds import render_scene_background` added with the existing UI imports.
 **Why:** Same as test world — make every opaque scene speak through the template registry so re-skinning is one line in `settings.py`.
 **Editor:** Frankie (Claude Opus 4.7)
+
+## 2026-05-10T16:58-04:00 — Title waves loop, menu SFX wiring, and controller confirm parity
+
+**File:** settings.py
+**Lines (at time of edit):** 146-152 (modified)
+**Before:**
+```python
+SOUND_EFFECTS: dict[str, str] = {}
+```
+**After:**
+```python
+SOUND_EFFECTS: dict[str, str] = {
+  "menu_move": os.path.join(..., "sfx_menu_move2.ogg"),
+  "menu_select": os.path.join(..., "sfx_menu_select3.ogg"),
+}
+```
+**Why:** Register the new menu navigation and selection sounds in the central audio registry so scenes can trigger them by logical name.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** ui/input_map.py
+**Lines (at time of edit):** 23-31 (modified)
+**Before:** Confirm only mapped controller `A`.
+**After:** Confirm maps controller `A` and `START`.
+**Why:** Ensure controller users can select menu items with START the same way keyboard users can confirm with multiple keys.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** systems/audio_manager.py
+**Lines (at time of edit):** 99, 134-156 (modified)
+**Before:** Loader failures were printed with `print(...)`; music selection only supported random tracks from `MUSIC_TRACKS`.
+**After:** Loader failures now log to `stderr`; added `play_music_track(track_path, loops=-1)` for scene-specific looping music and reused it from `play_random_music`.
+**Why:** Keep diagnostics out of gameplay output and add a clean API for title-only ambience playback.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** ui/menu.py
+**Lines (at time of edit):** 56-96, 153-163 (modified)
+**Before:** `move_up`, `move_down`, `confirm`, and `cancel` returned `None`.
+**After:** These methods now return booleans indicating whether an action fired (`cursor moved`, `item selected`, `cancel handled`).
+**Why:** Lets scenes play menu SFX only when a real menu action occurred.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** core/scenes/title_scene.py
+**Lines (at time of edit):** 15-22, 87-93, 127-136 (modified)
+**Before:** No title-specific music lifecycle; menu navigation/confirm was silent.
+**After:** `on_enter` loops `AssetPaths.WAVES_SOUND`, `on_exit` stops music; menu up/down play `menu_move` and confirm plays `menu_select`.
+**Why:** Implement requested ambient title loop and wire both keyboard/controller menu interactions to the new SFX cues.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** core/scenes/menu_scene.py
+**Lines (at time of edit):** 77-90 (modified)
+**Before:** Pause menu navigation/confirm/cancel was silent.
+**After:** Up/down play `menu_move`; confirm/cancel play `menu_select` when the action succeeds.
+**Why:** Apply the same menu SFX behavior to the overlay menu for consistency.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** core/scenes/test_world_scene.py
+**Lines (at time of edit):** 98-112 (modified)
+**Before:** World command menu navigation/confirm was silent.
+**After:** Up/down play `menu_move`; confirm plays `menu_select` on successful selection.
+**Why:** Ensure all in-world command-menu interactions use the same SFX language as title/pause menus.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** docs/ARCHITECTURE.md
+**Lines (at time of edit):** 42, 48, 85 (modified)
+**Before:** Input section did not document START-as-confirm; audio section did not mention direct track playback; title scene description had no ambience note.
+**After:** Documented confirm parity (`A` + `START`), `play_music_track`, and title-scene `waves.ogg` loop behavior.
+**Why:** Keep architecture docs aligned with the implemented input/audio/scene behavior.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)

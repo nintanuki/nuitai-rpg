@@ -14,7 +14,14 @@ import pygame
 from core import save
 from core.factories import party_member_from_data
 from core.scene import Scene
-from settings import ColorSettings, FontSettings, SaveSettings, ScreenSettings, UISettings
+from settings import (
+    AssetPaths,
+    ColorSettings,
+    FontSettings,
+    SaveSettings,
+    ScreenSettings,
+    UISettings,
+)
 from systems.party import Party
 from ui import input_map, text_renderer
 from ui.menu import Menu, MenuItem
@@ -77,6 +84,14 @@ class TitleScene(Scene):
         )
         self._test_world_cls = TestWorldScene
 
+    def on_enter(self) -> None:
+        """Start looping ambient waves while the title screen is active."""
+        self.gm.audio.play_music_track(AssetPaths.WAVES_SOUND, loops=-1)
+
+    def on_exit(self) -> None:
+        """Stop title ambience when leaving this scene."""
+        self.gm.audio.stop_music()
+
     # ------------------------------------------------------------------
     # ACTIONS
     # ------------------------------------------------------------------
@@ -111,11 +126,14 @@ class TitleScene(Scene):
             event: The pygame event to handle.
         """
         if input_map.is_up(event):
-            self.menu.move_up()
+            if self.menu.move_up():
+                self.gm.audio.play("menu_move")
         elif input_map.is_down(event):
-            self.menu.move_down()
+            if self.menu.move_down():
+                self.gm.audio.play("menu_move")
         elif input_map.is_confirm(event):
-            self.menu.confirm()
+            if self.menu.confirm():
+                self.gm.audio.play("menu_select")
 
     def render(self, surface: pygame.Surface) -> None:
         """

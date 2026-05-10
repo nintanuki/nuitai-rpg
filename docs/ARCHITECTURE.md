@@ -39,13 +39,13 @@ Events are routed by type:
 - `JOYHATMOTION` → `_handle_joyhatmotion` (stub; scenes read these via `ui/input_map.py`).
 - `JOYAXISMOTION` → `_handle_joyaxismotion` (stub; scenes read these via `ui/input_map.py`).
 
-After global handling, every event is forwarded to the active scene through `scene_stack.handle_event(event)`. Scenes use [ui/input_map.py](../ui/input_map.py) helpers (`is_confirm`, `is_cancel`, `is_up`, `is_down`, ...) to translate raw events into logical UI actions, so each scene does not reimplement the keyboard + controller routing.
+After global handling, every event is forwarded to the active scene through `scene_stack.handle_event(event)`. Scenes use [ui/input_map.py](../ui/input_map.py) helpers (`is_confirm`, `is_cancel`, `is_up`, `is_down`, ...) to translate raw events into logical UI actions, so each scene does not reimplement the keyboard + controller routing. Confirm currently maps to keyboard (`Enter`, `Z`, `Space`) plus controller (`A`, `START`) so menu selection parity is preserved across input devices.
 
 Joysticks are cached at startup in `setup_controllers()`. Hot-plug requires re-running it. The quit chord is `InputSettings.JOY_BUTTON_QUIT_COMBO`.
 
 ## 4. Audio
 
-[systems/audio_manager.py](../systems/audio_manager.py) is a data-driven sound and music dispatcher. It reads `AudioSettings.SOUND_EFFECTS` (logical name → path) on construction, loads each sound, and exposes a single `play(name)` entry point. Music is rotated through `AudioSettings.MUSIC_TRACKS`, avoiding back-to-back repeats, and managed via `play_random_music`, `pause_music`, `resume_music`, and `stop_music`. `toggle_mute` flips `AudioSettings.MUTE` globally — mute is honored at the call site, so toggles are instant and reversible.
+[systems/audio_manager.py](../systems/audio_manager.py) is a data-driven sound and music dispatcher. It reads `AudioSettings.SOUND_EFFECTS` (logical name → path) on construction, loads each sound, and exposes a single `play(name)` entry point. Music is rotated through `AudioSettings.MUSIC_TRACKS`, avoiding back-to-back repeats, and managed via `play_random_music`, `play_music_track`, `pause_music`, `resume_music`, and `stop_music`. `play_music_track` is used for scene-specific ambience (the title scene loops `waves.ogg` while active). `toggle_mute` flips `AudioSettings.MUTE` globally — mute is honored at the call site, so toggles are instant and reversible.
 
 `GameManager.__init__` initialises the mixer with `_initialize_audio_mixer()` **before** constructing `AudioManager`. Failure to load a sound, music track, or even the mixer itself is non-fatal — the game keeps running silently. Mixer init failures are logged to `stderr`, never to gameplay output.
 
@@ -82,7 +82,7 @@ A `Scene` ([core/scene.py](../core/scene.py)) is one screenful of game state —
 
 Layer-0 scenes:
 
-- [core/scenes/title_scene.py](../core/scenes/title_scene.py) — NEW GAME / CONTINUE / LOAD GAME / QUIT. CONTINUE and LOAD GAME are disabled when no save exists.
+- [core/scenes/title_scene.py](../core/scenes/title_scene.py) — NEW GAME / CONTINUE / LOAD GAME / QUIT. CONTINUE and LOAD GAME are disabled when no save exists. Loops `waves.ogg` while the scene is active.
 - [core/scenes/test_world_scene.py](../core/scenes/test_world_scene.py) — placeholder room with TALK / FIGHT / SAVE / QUIT TO TITLE commands.
 - [core/scenes/battle_scene.py](../core/scenes/battle_scene.py) — hosts a `Battle` and a `BattleView`; resolves to victory, defeat, or flee.
 - [core/scenes/menu_scene.py](../core/scenes/menu_scene.py) — translucent pause overlay (`OPAQUE = False`) with party / inventory / save / settings / quit-to-title rows.

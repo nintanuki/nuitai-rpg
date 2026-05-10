@@ -77,13 +77,17 @@ class MenuScene(Scene):
     def handle_event(self, event: pygame.event.Event) -> None:
         """Standard menu navigation."""
         if input_map.is_up(event):
-            self.menu.move_up()
+            if self.menu.move_up():
+                self.gm.audio.play("menu_move")
         elif input_map.is_down(event):
-            self.menu.move_down()
+            if self.menu.move_down():
+                self.gm.audio.play("menu_move")
         elif input_map.is_confirm(event):
-            self.menu.confirm()
+            if self.menu.confirm():
+                self.gm.audio.play("menu_select")
         elif input_map.is_cancel(event):
-            self.menu.cancel()
+            if self.menu.cancel():
+                self.gm.audio.play("menu_select")
 
     def render(self, surface: pygame.Surface) -> None:
         """Dim the underlying world, then draw the menu over it."""

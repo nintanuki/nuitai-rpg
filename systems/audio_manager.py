@@ -60,6 +60,7 @@ DESIGN NOTES
 
 import pygame
 import random
+import sys
 
 from settings import AudioSettings
 
@@ -95,7 +96,7 @@ class AudioManager:
         try:
             return pygame.mixer.Sound(path)
         except (pygame.error, FileNotFoundError) as error:
-            print(f"Could not load sound {path}: {error}")
+            sys.stderr.write(f"Could not load sound {path}: {error}\n")
             return None
 
     # ------------------------------------------------------------------
@@ -130,15 +131,30 @@ class AudioManager:
         if not available:
             available = AudioSettings.MUSIC_TRACKS
         track = random.choice(available)
-        self._last_music_track = track
+        self.play_music_track(track, loops=-1)
 
+    def play_music_track(self, track_path: str, loops: int = -1) -> bool:
+        """Load and play one specific music track.
+
+        Args:
+            track_path: Filesystem path to a music file.
+            loops: pygame loop count; ``-1`` loops indefinitely.
+
+        Returns:
+            True if playback started; False otherwise.
+        """
+        if AudioSettings.MUTE or AudioSettings.MUTE_MUSIC:
+            return False
         try:
-            pygame.mixer.music.load(track)
+            pygame.mixer.music.load(track_path)
             pygame.mixer.music.set_volume(AudioSettings.MUSIC_VOLUME)
-            pygame.mixer.music.play(loops=-1)
+            pygame.mixer.music.play(loops=loops)
+            self._last_music_track = track_path
             self._music_is_paused = False
-        except pygame.error as error:
-            print(f"Could not load music track {track}: {error}")
+            return True
+        except (pygame.error, FileNotFoundError) as error:
+            sys.stderr.write(f"Could not load music track {track_path}: {error}\n")
+            return False
 
     def stop_music(self) -> None:
         """Stop the current background track."""
