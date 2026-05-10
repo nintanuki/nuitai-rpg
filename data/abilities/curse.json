@@ -1,0 +1,10 @@
+{
+    "id": "curse",
+    "name": "Curse",
+    "element": "aku",
+    "power": 0,
+    "cost": 0,
+    "kind": "damage",
+    "target": "enemy",
+    "status": null
+}

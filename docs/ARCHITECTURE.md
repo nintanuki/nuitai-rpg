@@ -67,7 +67,8 @@ Joysticks are cached at startup in `setup_controllers()`. Hot-plug requires re-r
 | `AssetPaths`     | Asset file paths for non-font assets.                                            |
 | `DebugSettings`  | Debug-only toggles.                                                              |
 | `SaveSettings`   | `SAVES_DIR` (file-relative), `MAX_SAVE_SLOTS`, `AUTOSAVE_SLOT_ID`.                |
-| `UISettings`     | Text-box geometry, typewriter speed, menu cursor blink, menu spacing/alignment, title-screen layout anchors. |
+| `BattleSettings` | Starting potion count, potion heal amount, defend damage divisor. Gameplay-feel knobs for the battle system; element multipliers stay in `core/elements.py`. |
+| `UISettings`     | Text-box geometry, typewriter speed, menu cursor blink, menu spacing/alignment, title-screen layout anchors, command-panel width. |
 | `BackgroundSettings` | Named scene-background templates (solid / vertical gradient) and the `SceneClassName → template` mapping consumed by `utils/backgrounds.py`. |
 
 **No magic numbers anywhere outside this file.**
@@ -84,7 +85,7 @@ Layer-0 scenes:
 
 - [core/scenes/title_scene.py](../core/scenes/title_scene.py) — NEW GAME / CONTINUE / LOAD GAME / QUIT. CONTINUE and LOAD GAME are disabled when no save exists. Loops `waves.ogg` while the scene is active.
 - [core/scenes/test_world_scene.py](../core/scenes/test_world_scene.py) — placeholder room with TALK / FIGHT / SAVE / QUIT TO TITLE commands.
-- [core/scenes/battle_scene.py](../core/scenes/battle_scene.py) — hosts a `Battle` and a `BattleView`; resolves to victory, defeat, or flee.
+- [core/scenes/battle_scene.py](../core/scenes/battle_scene.py) — hosts a `Battle` and a `BattleView`; resolves to victory, defeat, or flee. While a party member's turn waits on input, the bottom HUD splits into a left-side command panel (Attack / Defend / Ability / Potion x{N}) and a right-side prompt; choosing Ability swaps the panel for the active actor's ability submenu (cancel returns to the top level). Outside of awaiting-command moments the full bottom bar reverts to the standard text box. The active combatant's roster line renders in `ColorSettings.YELLOW` so the player always knows whose turn it is.
 - [core/scenes/menu_scene.py](../core/scenes/menu_scene.py) — translucent pause overlay (`OPAQUE = False`) with party / inventory / save / settings / quit-to-title rows.
 
 ## 7a. Scene backgrounds — template registry
@@ -114,7 +115,7 @@ Mana → transcends → Ra
 
 [core/events.py](../core/events.py) defines frozen dataclasses for what gameplay produces and views consume:
 
-- Battle: `TurnStartEvent`, `AttackEvent`, `DamageEvent`, `StatusAppliedEvent`, `CombatantDefeatedEvent`, `BattleEndedEvent`.
+- Battle: `TurnStartEvent`, `AttackEvent`, `DamageEvent`, `DefendEvent`, `AbilityUsedEvent`, `HealEvent`, `PotionUsedEvent`, `StatusAppliedEvent`, `CombatantDefeatedEvent`, `BattleEndedEvent`.
 - Dialogue: `DialogueLineEvent`, `DialogueEndedEvent`.
 
 Game logic produces events; views consume them. Across the five layers, only the views change. New event types are added freely; views ignore unknown ones, so producers can extend the stream without breaking older views.
@@ -133,8 +134,8 @@ The seam from JSON dict to runtime gameplay object lives in [core/factories.py](
 
 ## 12. Gameplay systems
 
-- [systems/party.py](../systems/party.py) — `PartyMember` and `Party`: members, inventory, gold, story flags. Fully serialisable; the canonical source for save data.
-- [systems/battle.py](../systems/battle.py) — `Combatant` and `Battle`: turn-queue logic. Pure data; emits events; never draws.
+- [systems/party.py](../systems/party.py) — `PartyMember` and `Party`: members, inventory, gold, story flags. `PartyMember` carries a `learnset` (list of ability ids) that survives save/load. Fully serialisable; the canonical source for save data.
+- [systems/battle.py](../systems/battle.py) — `Combatant` and `Battle`: turn-queue logic. Pure data; emits events; never draws. The scene drives a battle in two beats: `start_turn()` advances the queue, emits `TurnStartEvent`, and **resolves enemy actions inline**; for a party actor it parks the battle in *awaiting-command* mode (`is_awaiting_command()`) until the scene calls one of `submit_attack`, `submit_defend`, `submit_ability(ability_id)`, or `submit_potion`. `Combatant.is_defending` halves incoming damage (per `BattleSettings.DEFEND_DAMAGE_DIVISOR`) until the defender's own next turn. Potions are a shared pool seeded from `BattleSettings.STARTING_POTIONS`. Turn order is the simple sequential `party + enemies` rotation; the eventual destination is an **FFX-style Conditional Turn-Based** queue driven by per-combatant speed and weighted by action cost — the command interface above is shaped so that swap is an internal change to this module only.
 - [systems/dialogue.py](../systems/dialogue.py) — `DialogueRunner`: walks a JSON dialogue tree and emits `DialogueLineEvent`s, then `DialogueEndedEvent`.
 
 ## 13. UI

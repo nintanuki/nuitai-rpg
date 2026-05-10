@@ -72,6 +72,58 @@ class CombatantDefeatedEvent:
 
 
 @dataclass(frozen=True)
+class DefendEvent:
+    """Emitted when a combatant chooses to defend.
+
+    Defending halves incoming damage until the combatant's next turn.
+    The status itself lives on ``Combatant.is_defending``; this event is
+    the narration hook.
+    """
+
+    combatant_id: str
+    combatant_name: str
+
+
+@dataclass(frozen=True)
+class AbilityUsedEvent:
+    """Emitted when a combatant invokes a named ability.
+
+    Damage / heal numbers still ride on ``DamageEvent`` / ``HealEvent``;
+    this event is the narration hook that names the move.
+    """
+
+    user_id: str
+    user_name: str
+    ability_id: str
+    ability_name: str
+
+
+@dataclass(frozen=True)
+class HealEvent:
+    """Emitted after HP is restored on a combatant."""
+
+    target_id: str
+    target_name: str
+    amount: int
+
+
+@dataclass(frozen=True)
+class PotionUsedEvent:
+    """Emitted when a party member spends a potion to heal.
+
+    The accompanying ``HealEvent`` carries the actual HP restored.
+    ``potions_remaining`` is included so the view can refresh its
+    on-screen ``x{N}`` indicator from the same stream.
+    """
+
+    user_id: str
+    user_name: str
+    target_id: str
+    target_name: str
+    potions_remaining: int
+
+
+@dataclass(frozen=True)
 class BattleEndedEvent:
     """Emitted once the battle is fully resolved."""
 

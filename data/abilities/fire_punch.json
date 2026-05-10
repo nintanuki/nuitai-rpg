@@ -1,0 +1,10 @@
+{
+    "id": "fire_punch",
+    "name": "Fire Punch",
+    "element": "ahi",
+    "power": 0,
+    "cost": 0,
+    "kind": "damage",
+    "target": "enemy",
+    "status": null
+}

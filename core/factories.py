@@ -24,7 +24,10 @@ def party_member_from_data(data: dict[str, Any]) -> PartyMember:
 
     Args:
         data: A dict from ``data/characters/<id>.json`` with at least
-            ``id``, ``name``, and a two-element ``elements`` list.
+            ``id``, ``name``, and a two-element ``elements`` list. The
+            optional ``learnset`` array carries ability ids that the
+            member knows; battle-time lookup happens through
+            ``Battle.abilities_for``.
 
     Returns:
         A fresh ``PartyMember`` ready to be added to a ``Party``.
@@ -35,6 +38,7 @@ def party_member_from_data(data: dict[str, Any]) -> PartyMember:
         name=data["name"],
         elements=(elements[0], elements[1]),
         stats=dict(data.get("stats", {})),
+        learnset=list(data.get("learnset", [])),
     )
 
 
@@ -46,7 +50,8 @@ def combatant_from_party_member(member: PartyMember) -> Combatant:
 
     Returns:
         A ``Combatant`` whose element is the member's primary (first)
-        element. Layer 1 will extend this to honour an active stance.
+        element and whose learnset carries the member's ability ids.
+        Layer 1 will extend this to honour an active stance.
     """
     primary = Element(member.elements[0])
     return Combatant(
@@ -56,6 +61,7 @@ def combatant_from_party_member(member: PartyMember) -> Combatant:
         attack=member.stats.get("attack", 6),
         element=primary,
         is_party=True,
+        learnset=list(member.learnset),
     )
 
 

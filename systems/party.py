@@ -23,6 +23,7 @@ class PartyMember:
         name: str,
         elements: tuple[str, str],
         stats: dict[str, int] | None = None,
+        learnset: list[str] | None = None,
     ) -> None:
         """Construct a party member.
 
@@ -32,11 +33,15 @@ class PartyMember:
             name: Display name.
             elements: The member's two element ids (e.g. ``("ahi", "wai")``).
             stats: Optional initial stat dict. Missing keys default to 0.
+            learnset: Optional list of ability ids the member knows.
+                Resolved against the ability content pack at battle
+                time.
         """
         self.id = member_id
         self.name = name
         self.elements = elements
         self.stats = dict(stats) if stats else {}
+        self.learnset = list(learnset) if learnset else []
 
     def to_dict(self) -> dict[str, Any]:
         """Serialise this member to a JSON-safe dict."""
@@ -45,6 +50,7 @@ class PartyMember:
             "name": self.name,
             "elements": list(self.elements),
             "stats": dict(self.stats),
+            "learnset": list(self.learnset),
         }
 
     @classmethod
@@ -55,6 +61,7 @@ class PartyMember:
             name=data["name"],
             elements=tuple(data["elements"]),
             stats=dict(data.get("stats", {})),
+            learnset=list(data.get("learnset", [])),
         )
 
 

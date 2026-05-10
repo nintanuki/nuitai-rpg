@@ -32,49 +32,25 @@ class BackgroundSettings:
             interpolated top → bottom.
     """
 
-    # SOLID is the discriminator string for flat-fill templates;
-    # GRADIENT for top-to-bottom interpolated templates. Kept as
-    # constants so call sites never type the literal.
     SOLID = "solid"
     GRADIENT = "gradient"
 
-    # Built-in templates. Add freely; each name is a stable handle that
-    # ``SCENE_BACKGROUNDS`` and any future settings UI can reference.
-    # Color tuples are RGB in 0..255.
     TEMPLATES: dict = {
-        # Sunlit aqua surface fading to deep-ocean navy — the Ms. Fishy
-        # backdrop reused here for any underwater / open-sea feel.
         "ocean": (GRADIENT, (60, 180, 210), (10, 30, 70)),
-        # Indigo night fading to true black; good for somber title cards
-        # and pre-dawn world rooms.
         "midnight": (GRADIENT, (20, 20, 60), (0, 0, 0)),
-        # Plum dusk fading to deep violet; warmer alternative to
-        # midnight for menus that want some color.
         "dusk": (GRADIENT, (120, 60, 100), (20, 10, 40)),
-        # Volcanic top fading to ember bottom — for fire-island and
-        # battle scenes that want heat without changing the layout.
         "ember": (GRADIENT, (200, 80, 30), (60, 10, 10)),
-        # Flat fills — keep these around so the system can express the
-        # game's pre-template look without special-casing scenes.
         "nero": (SOLID, (30, 30, 30)),
         "black": (SOLID, (0, 0, 0)),
     }
 
-    # Which template each scene uses. Keys are scene class names so the
-    # renderer can look up by ``type(scene).__name__`` without scenes
-    # having to declare anything. Unlisted scenes use ``DEFAULT_TEMPLATE``.
     SCENE_BACKGROUNDS: dict = {
         "TitleScene": "ocean",
         "TestWorldScene": "nero",
         "BattleScene": "nero",
-        # ``MenuScene`` is a translucent overlay (``OPAQUE = False``) and
-        # does not paint its own background, so this entry is advisory
-        # for future opaque variants only.
         "MenuScene": "nero",
     }
 
-    # Fallback template name when a scene has no entry above. Must be a
-    # key in ``TEMPLATES``.
     DEFAULT_TEMPLATE: str = "nero"
 
 
@@ -120,31 +96,20 @@ class FontSettings:
         os.path.dirname(__file__), 'assets', 'font', 'Pixeled.ttf'
     )
 
-    # Pixel-font point sizes. The Pixeled font reads cleanly only at these
-    # ladder rungs; intermediate sizes blur because the glyphs are not
-    # vector-grid-aligned. Add new sizes only by powers-of-two-ish steps.
-    SIZE_SMALL = 12   # Subtle UI like menu hints, status strips.
-    SIZE_BODY = 16    # Default in-game prose (text box, menus).
-    SIZE_HEADING = 24 # Scene titles, character names above text boxes.
-    SIZE_TITLE_SCREEN_HEADING = 72  # Main title text on the title screen.
+    SIZE_SMALL = 12
+    SIZE_BODY = 16
+    SIZE_HEADING = 24
+    SIZE_TITLE_SCREEN_HEADING = 72
 
 class AudioSettings:
-    """Global audio toggles, mixer-level defaults, and the sound/music registry.
-
-    The AudioManager is fully data-driven: it loads every entry from
-    ``SOUND_EFFECTS`` on startup and rotates through ``MUSIC_TRACKS`` for
-    background music. Add new audio cues by editing those two collections —
-    the manager itself never has to change.
-    """
+    """Global audio toggles, mixer-level defaults, and the sound/music registry."""
 
     MUTE = False
-    MUTE_MUSIC = False  # Keep music disabled while retaining sound effects.
-    MUSIC_VOLUME = 1.0  # Default music volume in the range [0.0, 1.0].
-    SFX_VOLUME = 1.0  # Default sound-effect volume in the range [0.0, 1.0].
+    MUTE_MUSIC = False
+    MUSIC_VOLUME = 1.0
+    SFX_VOLUME = 1.0
 
-    # Logical name -> filesystem path. Keys are what gameplay code passes to
-    # ``AudioManager.play(name)``.
-    SOUND_EFFECTS: dict[str, str] = {
+    SOUND_EFFECTS: dict = {
         "menu_move": os.path.join(
             os.path.dirname(__file__), 'assets', 'audio', 'sound', 'sfx_menu_move2.ogg'
         ),
@@ -153,9 +118,7 @@ class AudioSettings:
         ),
     }
 
-    # Per-file overrides for sound effects. Set any entry to 0.0 to mute only
-    # that file without affecting global SFX volume.
-    SFX_FILE_VOLUMES: dict[str, float] = {
+    SFX_FILE_VOLUMES: dict = {
         os.path.join(
             os.path.dirname(__file__), 'assets', 'audio', 'sound', 'sfx_menu_move2.ogg'
         ): 0.2,
@@ -164,13 +127,9 @@ class AudioSettings:
         ): 0.2,
     }
 
-    # Background tracks; one is chosen at random each time music starts,
-    # avoiding back-to-back repeats. Empty by default.
-    MUSIC_TRACKS: list[str] = []
+    MUSIC_TRACKS: list = []
 
-    # Per-file overrides for music tracks. Set any entry to 0.0 to mute only
-    # that file without affecting global music volume.
-    MUSIC_FILE_VOLUMES: dict[str, float] = {
+    MUSIC_FILE_VOLUMES: dict = {
         os.path.join(
             os.path.dirname(__file__), 'assets', 'audio', 'sound', 'waves.ogg'
         ): 1.0,
@@ -178,8 +137,6 @@ class AudioSettings:
 
 class AssetPaths:
     """Class to hold all the file paths for assets."""
-    # __file__-relative so the project runs no matter the working directory
-    # (e.g. when launched from the arcade cabinet launcher).
     TV = os.path.join(
         os.path.dirname(__file__), 'assets', 'graphics', 'effects', 'tv.png'
     )
@@ -199,62 +156,63 @@ class DebugSettings:
 
 
 class SaveSettings:
-    """Save-system tunables.
+    """Save-system tunables."""
 
-    Saves are JSON files written under ``SAVES_DIR``, one file per slot
-    (``slot_<id>.json``). Slot 0 is reserved for autosaves; slots
-    1..MAX_SAVE_SLOTS are player-driven.
-    """
-
-    # __file__-relative so saves live next to the running game regardless
-    # of the working directory the launcher used.
     SAVES_DIR = os.path.join(os.path.dirname(__file__), 'saves')
-
-    # Player-facing slot count. Slot 0 is reserved for the autosave on top
-    # of this number; the UI will render 1..N + an autosave row.
     MAX_SAVE_SLOTS = 3
-
-    # Autosave slot id. Must be 0 (reserved); kept as a constant so code
-    # never types the literal.
     AUTOSAVE_SLOT_ID = 0
 
 
-class UISettings:
-    """Tunables for in-game UI presentation.
+class BattleSettings:
+    """Gameplay tunables for battles.
 
-    All measurements are in screen pixels unless noted otherwise. Time
-    values are in seconds. Speeds (``*_PER_SECOND``) are rates so they
-    work regardless of frame rate.
+    Damage multipliers live in ``core/elements.py`` (single source of
+    truth for element math). Everything here is content-feel: how many
+    potions the party starts an encounter with, how much a potion heals,
+    how much defending reduces incoming damage.
     """
 
-    # Text-box geometry. The dialogue box hugs the bottom of the screen at
-    # this height with this much inner padding before text begins. Border
-    # is the thickness of the rectangle drawn around it.
+    # Encounter starting inventory. Layer 1 will move this into the
+    # party's shared inventory; for the Layer-0 test fight a flat pool
+    # on the Battle object is enough.
+    STARTING_POTIONS = 5
+
+    # Flat heal applied to one party member per potion used. Calibrated
+    # against Combatant HP (Kailo 30, Hina 25, Tawiri 22) so a potion
+    # meaningfully restores roughly half a bar.
+    POTION_HEAL_AMOUNT = 15
+
+    # Integer divisor applied to incoming damage when the target spent
+    # its last turn defending. Tweak here to soften / sharpen defend.
+    DEFEND_DAMAGE_DIVISOR = 2
+
+
+class UISettings:
+    """Tunables for in-game UI presentation."""
+
     TEXT_BOX_HEIGHT = 160
     TEXT_BOX_PADDING = 16
     TEXT_BOX_BORDER_THICKNESS = 3
 
-    # Typewriter rendering speed. Characters are revealed at this rate
-    # while the box is paginating; pressing confirm fast-forwards to the
-    # end of the current page.
+    # Width of the command panel on the left half of the bottom HUD
+    # during a party member's turn. The remaining horizontal space
+    # hosts the dialogue prompt to the right of the divider.
+    # Sized so the divider clears the widest line in the party roster
+    # ("TAWIRI 22/22") with a small margin.
+    COMMAND_PANEL_WIDTH = 200
+
+    # Per-row gap (in pixels) for the battle command menu. Tighter than
+    # the default menu spacing so all four commands fit in the bottom
+    # HUD without the panel having to grow.
+    COMMAND_MENU_ITEM_SPACING = 4
+
     TYPEWRITER_CHARS_PER_SECOND = 60
 
-    # Menu cursor blink. Two phases per second feels alert without being
-    # distracting; lower for a more sedate cursor.
     MENU_CURSOR_BLINK_HZ = 2.0
-
-    # Vertical spacing between menu items. Calibrated so SIZE_BODY text
-    # has comfortable headroom without wasting screen real estate.
     MENU_ITEM_SPACING = 8
-
-    # Title menu uses a tighter gap so the first item clears the heading
-    # while the bottom row stays anchored visually.
     TITLE_SCREEN_MENU_ITEM_SPACING = 4
-
-    # Horizontal gap in pixels between the menu cursor and label text.
     MENU_LABEL_OFFSET = 24
 
-    # Title-screen layout anchors in pixels from the top-left corner.
     TITLE_SCREEN_HEADING_X = 90
     TITLE_SCREEN_HEADING_Y = 90
     TITLE_SCREEN_MENU_X = 90

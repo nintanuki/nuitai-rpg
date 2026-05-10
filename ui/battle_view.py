@@ -12,10 +12,14 @@ with proper VO-style writing per character and per element.
 from __future__ import annotations
 
 from core.events import (
+    AbilityUsedEvent,
     AttackEvent,
     BattleEndedEvent,
     CombatantDefeatedEvent,
     DamageEvent,
+    DefendEvent,
+    HealEvent,
+    PotionUsedEvent,
     StatusAppliedEvent,
     TurnStartEvent,
 )
@@ -55,6 +59,20 @@ class BattleView:
                 tag = " It barely lands."
             self.text_box.push(
                 f"{event.target_name} takes {event.amount} damage.{tag}"
+            )
+        elif isinstance(event, DefendEvent):
+            self.text_box.push(f"{event.combatant_name} braces for the blow.")
+        elif isinstance(event, AbilityUsedEvent):
+            self.text_box.push(
+                f"{event.user_name} uses {event.ability_name}!"
+            )
+        elif isinstance(event, HealEvent):
+            self.text_box.push(
+                f"{event.target_name} recovers {event.amount} HP."
+            )
+        elif isinstance(event, PotionUsedEvent):
+            self.text_box.push(
+                f"{event.user_name} drinks a potion."
             )
         elif isinstance(event, StatusAppliedEvent):
             verb = "is afflicted by" if event.applied else "shakes off"

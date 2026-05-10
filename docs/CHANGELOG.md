@@ -740,3 +740,115 @@ def _music_volume_for(self, track_path: str) -> float: ...
 **After:** Audio docs now describe `SFX_FILE_VOLUMES` and `MUSIC_FILE_VOLUMES` precedence over global defaults and call out per-file muting via `0.0`.
 **Why:** Keep architecture documentation synchronized with the implemented audio configuration behavior.
 **Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+## 2026-05-10T19:23-04:00 — Interactive battle: command menu, abilities, potions, defending
+
+**File:** systems/battle.py
+**Lines (at time of edit):** whole-file rewrite of the public API
+**Before:** A single `step()` call resolved one turn end-to-end, picking targets automatically for both sides. No notion of player commands; defending and items did not exist.
+**After:** Turn loop is split into `start_turn()` (advances the queue, emits `TurnStartEvent`, auto-resolves enemy actions inline) and four player command verbs — `submit_attack`, `submit_defend`, `submit_ability(ability_id)`, `submit_potion`. `is_awaiting_command()` exposes the player-input gate; `current_actor` exposes the actor whose turn is live so the view can highlight them. `Combatant` gains `learnset` and `is_defending`; defending halves incoming damage (`BattleSettings.DEFEND_DAMAGE_DIVISOR`) until the defender's own next turn. `Battle.__init__` now takes an `abilities` dict and a starting `potions` count (defaulting to `BattleSettings.STARTING_POTIONS`). The module-level docstring documents the eventual FFX-style Conditional Turn-Based queue as the destination for the current sequential ordering.
+**Why:** First baby step toward a real JRPG combat loop — the player can actually fight the demo encounter instead of watching it. Keeping the public command interface narrow and event-driven so the future CTB scheduler is a pure internal swap.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/events.py
+**Lines (at time of edit):** appended after `CombatantDefeatedEvent`
+**Before:** Battle event stream covered `TurnStartEvent`, `AttackEvent`, `DamageEvent`, `StatusAppliedEvent`, `CombatantDefeatedEvent`, `BattleEndedEvent`.
+**After:** Added `DefendEvent`, `AbilityUsedEvent`, `HealEvent`, `PotionUsedEvent` so views can narrate the four new player verbs without inferring them from the existing stream.
+**Why:** Keep the producer→view contract typed; new commands need new records, not overloads of existing ones.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** ui/battle_view.py
+**Lines (at time of edit):** `consume` chain extended
+**Before:** Phrased only turn-start / attack / damage / status / defeated / ended.
+**After:** Phrases the four new events too: "{name} braces for the blow.", "{name} uses {ability}!", "{name} recovers {N} HP.", "{name} drinks a potion."
+**Why:** Mirror the new event types in the text-narration layer so the player sees what just happened.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/battle_scene.py
+**Lines (at time of edit):** whole-file rewrite of input + render
+**Before:** Drained `battle.step()` while the text box was empty; pressing cancel attempted to flee.
+**After:** When narration is draining, confirm still fast-forwards it. When the text box is empty and a party member's turn is waiting on input, the bottom HUD splits into a left command panel (Attack / Defend / Ability / Potion x{N}) and a right-side prompt. Picking Ability swaps the panel for the active actor's ability submenu; cancel from the submenu returns to the top-level menu, cancel from the top level still flees. The active combatant's roster line renders in `ColorSettings.YELLOW` so the player knows whose turn it is.
+**Why:** Implement the requested interactive flow with the smallest possible footprint — one new render branch, no new widget classes.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** systems/party.py
+**Lines (at time of edit):** `PartyMember` constructor + `to_dict` / `from_dict`
+**Before:** `PartyMember` carried id, name, elements, stats.
+**After:** Added a `learnset: list[str]` field; serialisation round-trips it.
+**Why:** Battle commands need to know which ability ids each character knows; the data already exists in `data/characters/<id>.json` and was just being dropped on the floor.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/factories.py
+**Lines (at time of edit):** `party_member_from_data`, `combatant_from_party_member`
+**Before:** Neither factory read or propagated `learnset`.
+**After:** `party_member_from_data` reads the JSON `learnset` array; `combatant_from_party_member` passes it to the new `Combatant(learnset=...)` keyword.
+**Why:** Same plumbing reason — keep the JSON → runtime mapping single-seamed.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** settings.py
+**Lines (at time of edit):** new `BattleSettings` class above `UISettings`, and `COMMAND_PANEL_WIDTH` added to `UISettings`
+**Before:** No battle-feel tunables existed in settings; potion count and defend strength would have leaked as magic numbers into `systems/battle.py`.
+**After:** `BattleSettings` holds `STARTING_POTIONS = 5`, `POTION_HEAL_AMOUNT = 15`, `DEFEND_DAMAGE_DIVISOR = 2`. `UISettings.COMMAND_PANEL_WIDTH = 280` controls the width of the new left-half command box.
+**Why:** Honour the "no magic numbers outside settings.py" rule. New unrelated tunables get their own `*Settings` class.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** data/abilities/fire_punch.json (new file)
+**After:** `{"id":"fire_punch","name":"Fire Punch","element":"ahi","power":0,"cost":0,"kind":"damage","target":"enemy","status":null}`
+**Why:** Kailo's first ability. `power: 0` means "use the actor's base attack stat", per Layer-0 baby-step rule that damaging abilities feel like a basic attack until Layer 1 designs real numbers.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** data/abilities/heal.json (new file)
+**After:** `{"id":"heal","name":"Heal","element":"ra","power":15,"cost":0,"kind":"heal","target":"kailo","status":null}`
+**Why:** Hina's first ability. Hard-targeted at Kailo for now; target-selection UI ships when the second healable scenario does.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** data/abilities/curse.json (new file)
+**After:** `{"id":"curse","name":"Curse","element":"aku","power":0,"cost":0,"kind":"damage","target":"enemy","status":null}`
+**Why:** Tawiri's first ability. Same baby-step semantics as Fire Punch — Aku-flavored basic attack until Layer 1 wires up status effects.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** data/abilities/firebolt.json (deleted)
+**Before:** `{"id":"firebolt","name":"Firebolt","element":"ahi","power":10,"cost":4,"status":null}`
+**Why:** Unreferenced placeholder superseded by `fire_punch.json` for Kailo's interactive-battle ability. Removed rather than left around to keep the content pack honest.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** data/characters/kailo.json
+**Before:** `"learnset": ["firebolt"]`
+**After:** `"learnset": ["fire_punch"]`
+**Why:** Points Kailo at the new ability id.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** data/characters/hina.json
+**Before:** `"learnset": []`
+**After:** `"learnset": ["heal"]`
+**Why:** Hina now knows Heal so her command-menu Ability option resolves to something.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** data/characters/tawiri.json
+**Before:** `"learnset": []`
+**After:** `"learnset": ["curse"]`
+**Why:** Same — Tawiri's Ability option now lists Curse.
+**Editor:** Frankie (Claude Opus 4.7)
+
+## 2026-05-10T19:50-04:00 — Battle UX pass: divider, compact menu, target selection
+
+**File:** settings.py
+**Lines (at time of edit):** UISettings — COMMAND_PANEL_WIDTH lowered; COMMAND_MENU_ITEM_SPACING added
+**Before:** `COMMAND_PANEL_WIDTH = 280` and no per-menu spacing constant.
+**After:** `COMMAND_PANEL_WIDTH = 200` so the divider sits just to the right of the party roster's widest line; `COMMAND_MENU_ITEM_SPACING = 4` so all four command rows fit inside the bottom HUD.
+**Why:** Frankie's screenshot showed the divider sitting too far right and the Potion row falling off the bottom of the panel; both came down to two numbers.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** ui/menu.py
+**Lines (at time of edit):** `Menu.render`
+**Before:** Rendered at a hard-coded `FontSettings.SIZE_BODY`.
+**After:** Accepts an optional `font_size` keyword; both the cursor glyph and the row label honour it. Default behaviour is unchanged.
+**Why:** Lets the battle command panel use `SIZE_SMALL` so all four commands fit without enlarging the panel; other call sites (title, pause, world) keep the larger body font.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/battle_scene.py
+**Lines (at time of edit):** scene rewrite for target selection
+**Before:** Attack always hit the first living enemy; Heal always healed Kailo (hard-coded by the ability JSON); Potion always healed the user. No target picker.
+**After:** Choosing Attack, a damage / heal ability, or Potion enters a target-selection state. The candidate pool is the living enemies for damaging commands and the living party for Heal / Potion. A blinking yellow `>` cursor appears next to the highlighted target on the roster; up / down cycle the cursor; confirm submits with `target_id`; cancel returns to the menu the player came from (ability submenu for abilities, top-level command menu otherwise). Defend skips targeting because it acts on the defender themselves. The command panel renders with `font_size=SIZE_SMALL` and the new tight `COMMAND_MENU_ITEM_SPACING`. Roster drawing was extracted into helper methods so the same loop handles both the active-actor yellow highlight and the targeting cursor.
+**Why:** Implements Frankie's "you should be able to select which enemy / which ally" request and removes the placeholder hard-codes from the ability JSON path.
+**Editor:** Frankie (Claude Opus 4.7)

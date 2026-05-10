@@ -3,5 +3,5 @@
     "name": "Tawiri",
     "elements": ["mana", "aku"],
     "stats": {"hp": 22, "attack": 9},
-    "learnset": []
+    "learnset": ["curse"]
 }

@@ -1,0 +1,10 @@
+{
+    "id": "heal",
+    "name": "Heal",
+    "element": "ra",
+    "power": 15,
+    "cost": 0,
+    "kind": "heal",
+    "target": "kailo",
+    "status": null
+}

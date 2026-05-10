@@ -103,6 +103,7 @@ class Menu:
         position: tuple[int, int],
         centered: bool = False,
         item_spacing: int | None = None,
+        font_size: int | None = None,
     ) -> None:
         """Draw the menu starting at ``position``.
 
@@ -111,8 +112,12 @@ class Menu:
             position: Anchor position in pixels.
             centered: If True, each row label is centered on ``position[0]``.
             item_spacing: Optional per-render row gap in pixels.
+            font_size: Optional override for the row font size; defaults
+                to ``FontSettings.SIZE_BODY``. Use ``SIZE_SMALL`` for
+                compact in-HUD menus like the battle command panel.
         """
-        font = text_renderer.get_font(FontSettings.SIZE_BODY)
+        size = FontSettings.SIZE_BODY if font_size is None else font_size
+        font = text_renderer.get_font(size)
         spacing = UISettings.MENU_ITEM_SPACING if item_spacing is None else item_spacing
         line_height = font.get_linesize() + spacing
         x, y = position
@@ -136,8 +141,11 @@ class Menu:
                     ">",
                     (text_x - UISettings.MENU_LABEL_OFFSET, row_y),
                     ColorSettings.YELLOW,
+                    size=size,
                 )
-            text_renderer.draw_text(surface, item.label, (text_x, row_y), color)
+            text_renderer.draw_text(
+                surface, item.label, (text_x, row_y), color, size=size
+            )
 
     # ------------------------------------------------------------------
     # INTERNALS
