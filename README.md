@@ -1,8 +1,8 @@
 # Nuitai RPG
 
-A turn-based, sprite-based JRPG set in the world of **Nuitai** — an ocean planet of scattered islands that spiral around a permanent maelstrom, where magic is motion and every fighter draws on two of six elements.
+A turn-based, sprite-based JRPG set in the world of **Nuitai**, an ocean planet of scattered islands that spiral around a permanent maelstrom, where magic is motion and every fighter draws on two of six elements.
 
-Long-term inspirations: *Chrono Trigger*, *Final Fantasy VI*, *Dragon Quest*. The eventual target is a complete SNES-style 2D JRPG with hand-drawn pixel art and an original score, all created by the author.
+Long-term inspirations: *Chrono Trigger*, *Final Fantasy IV*, *Dragon Quest*. The eventual target is a complete SNES-style 2D JRPG with hand-drawn pixel art and an original score, all created by the author without using free assets.
 
 ## Status
 
@@ -23,13 +23,13 @@ Every layer is **shippable on its own**. The Dragon Quest layer in particular is
 
 ## The world
 
-Nuitai is documented in [docs/lore/INDEX.md](docs/lore/INDEX.md) — 114 articles across 12 categories (people, places, organizations, languages, professions, species, rituals, technologies). The original World Anvil export is preserved at [docs/LOREDUMP.html](docs/LOREDUMP.html).
+Nuitai is documented in [docs/lore/INDEX.md](docs/lore/INDEX.md) — 114 articles across 12 categories (people, places, organizations, languages, professions, species, rituals, technologies). The World Anvil export is preserved at [docs/LOREDUMP.html](docs/LOREDUMP.html). The original World Anvil Page can be found [here](https://www.worldanvil.com/w/nuitai-nintanuki).
 
 The artistic and design pillars that come from the lore are summarized in [docs/VISION.md](docs/VISION.md).
 
 ## The starting party
 
-The Layer-1 demo ships with three playable characters, one of every primary battle role except a pure saboteur. Together they cover all six elements with no overlap.
+The Layer-1 demo will have three playable characters with different battle rolls. Together they cover all six elements with no overlap.
 
 | Character | Elements | Role | Source article |
 | --------- | -------- | ---- | -------------- |
@@ -37,7 +37,7 @@ The Layer-1 demo ships with three playable characters, one of every primary batt
 | **Hina** | Ra (Light) + Lau (Nature) | Enhancer / Healer | [docs/lore/person/hina-the-māra-priestess.md](docs/lore/person/hina-the-māra-priestess.md) |
 | **Tawiri** | Mana (Spirit) + Aku (Shadow) | Blaster / Saboteur | [docs/lore/person/tawiri-the-elderly-caller.md](docs/lore/person/tawiri-the-elderly-caller.md) |
 
-A fourth character, **Maika** (Lau + Mana, healer / blaster — [docs/lore/person/maika-the-maki-sage.md](docs/lore/person/maika-the-maki-sage.md)), appears as an NPC in the demo and joins the party in Layer 2.
+A fourth character, **Maika** (Lau + Mana, healer / blaster — [docs/lore/person/maika-the-maki-sage.md](docs/lore/person/maika-the-maki-sage.md)), will also appear as an NPC in the demo and join the party in Layer 2.
 
 ## Requirements
 
@@ -89,5 +89,5 @@ settings.py      All tunable constants.
 ## Asset credits
 
 - `assets/font/Pixeled.ttf` — *Pixeled* by OmegaPC777 (free for personal & commercial use).
-- `assets/graphics/effects/tv.png` — CRT overlay reused from the arcade cabinet asset set.
+- `assets/graphics/effects/tv.png` — CRT overlay reused from the arcade cabinet asset set. Originally created and coded by Clear Code of YouTube.
 - The long-term goal is for **all** sprite art, music, and writing to be original work by the author. Free placeholder assets used during early layers will be credited here as they are added, and replaced as the project matures.
