@@ -82,7 +82,7 @@ class AudioManager:
         for name, path in AudioSettings.SOUND_EFFECTS.items():
             sound = self._load_sound(path)
             if sound is not None:
-                sound.set_volume(AudioSettings.SFX_VOLUME)
+                sound.set_volume(self._sfx_volume_for(path))
                 self.sounds[name] = sound
 
         # Track last played track so the same song never repeats back-to-back.
@@ -98,6 +98,17 @@ class AudioManager:
         except (pygame.error, FileNotFoundError) as error:
             sys.stderr.write(f"Could not load sound {path}: {error}\n")
             return None
+
+    def _sfx_volume_for(self, path: str) -> float:
+        """Return the configured volume for one sound-effect file path."""
+        return AudioSettings.SFX_FILE_VOLUMES.get(path, AudioSettings.SFX_VOLUME)
+
+    def _music_volume_for(self, track_path: str) -> float:
+        """Return the configured volume for one music file path."""
+        return AudioSettings.MUSIC_FILE_VOLUMES.get(
+            track_path,
+            AudioSettings.MUSIC_VOLUME,
+        )
 
     # ------------------------------------------------------------------
     # SOUND EFFECTS
@@ -147,7 +158,7 @@ class AudioManager:
             return False
         try:
             pygame.mixer.music.load(track_path)
-            pygame.mixer.music.set_volume(AudioSettings.MUSIC_VOLUME)
+            pygame.mixer.music.set_volume(self._music_volume_for(track_path))
             pygame.mixer.music.play(loops=loops)
             self._last_music_track = track_path
             self._music_is_paused = False

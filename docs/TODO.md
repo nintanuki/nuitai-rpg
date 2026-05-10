@@ -97,7 +97,7 @@
 ### Tooling
 
 - [ ] Add `tests/smoke_test.py` driven by `SDL_VIDEODRIVER=dummy` + `SDL_AUDIODRIVER=dummy`. Boot, advance N frames, push the NEW GAME → FIGHT → SAVE → QUIT TO TITLE → CONTINUE round-trip, assert the saved party reloads. One file, no test framework — runnable as `python tests/smoke_test.py`.
-- [ ] Delete the stray `.gitignore copy` at the repo root.
+- [x] Delete the stray `.gitignore copy` at the repo root.
 
 ### Writing pipeline
 

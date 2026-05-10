@@ -45,7 +45,7 @@ Joysticks are cached at startup in `setup_controllers()`. Hot-plug requires re-r
 
 ## 4. Audio
 
-[systems/audio_manager.py](../systems/audio_manager.py) is a data-driven sound and music dispatcher. It reads `AudioSettings.SOUND_EFFECTS` (logical name → path) on construction, loads each sound, and exposes a single `play(name)` entry point. Music is rotated through `AudioSettings.MUSIC_TRACKS`, avoiding back-to-back repeats, and managed via `play_random_music`, `play_music_track`, `pause_music`, `resume_music`, and `stop_music`. `play_music_track` is used for scene-specific ambience (the title scene loops `waves.ogg` while active). `toggle_mute` flips `AudioSettings.MUTE` globally — mute is honored at the call site, so toggles are instant and reversible.
+[systems/audio_manager.py](../systems/audio_manager.py) is a data-driven sound and music dispatcher. It reads `AudioSettings.SOUND_EFFECTS` (logical name → path) on construction, loads each sound, and exposes a single `play(name)` entry point. Each loaded sound resolves its volume from `AudioSettings.SFX_FILE_VOLUMES` first, then falls back to `AudioSettings.SFX_VOLUME`; setting one file override to `0.0` mutes only that cue. Music is rotated through `AudioSettings.MUSIC_TRACKS`, avoiding back-to-back repeats, and managed via `play_random_music`, `play_music_track`, `pause_music`, `resume_music`, and `stop_music`. Each track resolves volume from `AudioSettings.MUSIC_FILE_VOLUMES` first, then falls back to `AudioSettings.MUSIC_VOLUME`; this also applies to scene-specific tracks loaded directly with `play_music_track` (the title scene loops `waves.ogg` while active). `toggle_mute` flips `AudioSettings.MUTE` globally — mute is honored at the call site, so toggles are instant and reversible.
 
 `GameManager.__init__` initialises the mixer with `_initialize_audio_mixer()` **before** constructing `AudioManager`. Failure to load a sound, music track, or even the mixer itself is non-fatal — the game keeps running silently. Mixer init failures are logged to `stderr`, never to gameplay output.
 
@@ -63,7 +63,7 @@ Joysticks are cached at startup in `setup_controllers()`. Hot-plug requires re-r
 | `ScreenSettings` | Resolution, FPS, title, CRT alpha range and scanline height.                     |
 | `InputSettings`  | Controller button/axis indices + quit combo + analog threshold.                  |
 | `FontSettings`   | Font file paths and size rungs (`SIZE_SMALL`, `SIZE_BODY`, `SIZE_HEADING`, title-screen heading size). |
-| `AudioSettings`  | Mute toggles, music + SFX volume, `SOUND_EFFECTS` and `MUSIC_TRACKS` registry.   |
+| `AudioSettings`  | Mute toggles, default music + SFX volume, per-file `MUSIC_FILE_VOLUMES`/`SFX_FILE_VOLUMES`, and `SOUND_EFFECTS`/`MUSIC_TRACKS` registry.   |
 | `AssetPaths`     | Asset file paths for non-font assets.                                            |
 | `DebugSettings`  | Debug-only toggles.                                                              |
 | `SaveSettings`   | `SAVES_DIR` (file-relative), `MAX_SAVE_SLOTS`, `AUTOSAVE_SLOT_ID`.                |

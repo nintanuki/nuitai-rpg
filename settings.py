@@ -139,8 +139,8 @@ class AudioSettings:
 
     MUTE = False
     MUTE_MUSIC = False  # Keep music disabled while retaining sound effects.
-    MUSIC_VOLUME = 1.0  # Background music volume in the range [0.0, 1.0].
-    SFX_VOLUME = 1.0  # Sound effect volume in the range [0.0, 1.0].
+    MUSIC_VOLUME = 1.0  # Default music volume in the range [0.0, 1.0].
+    SFX_VOLUME = 1.0  # Default sound-effect volume in the range [0.0, 1.0].
 
     # Logical name -> filesystem path. Keys are what gameplay code passes to
     # ``AudioManager.play(name)``.
@@ -153,9 +153,28 @@ class AudioSettings:
         ),
     }
 
+    # Per-file overrides for sound effects. Set any entry to 0.0 to mute only
+    # that file without affecting global SFX volume.
+    SFX_FILE_VOLUMES: dict[str, float] = {
+        os.path.join(
+            os.path.dirname(__file__), 'assets', 'audio', 'sound', 'sfx_menu_move2.ogg'
+        ): 0.2,
+        os.path.join(
+            os.path.dirname(__file__), 'assets', 'audio', 'sound', 'sfx_menu_select3.ogg'
+        ): 0.2,
+    }
+
     # Background tracks; one is chosen at random each time music starts,
     # avoiding back-to-back repeats. Empty by default.
     MUSIC_TRACKS: list[str] = []
+
+    # Per-file overrides for music tracks. Set any entry to 0.0 to mute only
+    # that file without affecting global music volume.
+    MUSIC_FILE_VOLUMES: dict[str, float] = {
+        os.path.join(
+            os.path.dirname(__file__), 'assets', 'audio', 'sound', 'waves.ogg'
+        ): 1.0,
+    }
 
 class AssetPaths:
     """Class to hold all the file paths for assets."""

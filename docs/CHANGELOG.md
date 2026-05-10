@@ -676,3 +676,67 @@ SOUND_EFFECTS: dict[str, str] = {
 **After:** Cursor glyph `>` now renders with `ColorSettings.YELLOW`; row label colors remain unchanged.
 **Why:** Make the active menu cursor clearly visible and match the requested yellow cursor treatment across all menus.
 **Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+## 2026-05-10T18:45-04:00 — Per-file audio volume toggles in settings
+
+**File:** settings.py
+**Lines (at time of edit):** 142-177 (modified)
+**Before:**
+```python
+MUSIC_VOLUME = 1.0
+SFX_VOLUME = 1.0
+
+SOUND_EFFECTS = {
+  "menu_move": ".../sfx_menu_move2.ogg",
+  "menu_select": ".../sfx_menu_select3.ogg",
+}
+
+MUSIC_TRACKS = []
+```
+**After:**
+```python
+MUSIC_VOLUME = 1.0
+SFX_VOLUME = 1.0
+
+SFX_FILE_VOLUMES = {
+  ".../sfx_menu_move2.ogg": 1.0,
+  ".../sfx_menu_select3.ogg": 1.0,
+}
+
+MUSIC_TRACKS = []
+
+MUSIC_FILE_VOLUMES = {
+  ".../waves.ogg": 1.0,
+}
+```
+**Why:** Add per-file volume constants so each individual sound/music asset can be muted by setting its value to `0.0` (or tuned independently) without muting the whole SFX/music category.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** systems/audio_manager.py
+**Lines (at time of edit):** 82-111, 161 (modified)
+**Before:**
+```python
+sound.set_volume(AudioSettings.SFX_VOLUME)
+...
+pygame.mixer.music.set_volume(AudioSettings.MUSIC_VOLUME)
+```
+**After:**
+```python
+sound.set_volume(self._sfx_volume_for(path))
+...
+pygame.mixer.music.set_volume(self._music_volume_for(track_path))
+```
+plus helper methods:
+```python
+def _sfx_volume_for(self, path: str) -> float: ...
+def _music_volume_for(self, track_path: str) -> float: ...
+```
+**Why:** Ensure runtime playback honors the new per-file settings constants for both loaded SFX and direct music playback.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+**File:** docs/ARCHITECTURE.md
+**Lines (at time of edit):** 46-48, 66 (modified)
+**Before:** Audio docs described only global music/SFX volume settings.
+**After:** Audio docs now describe `SFX_FILE_VOLUMES` and `MUSIC_FILE_VOLUMES` precedence over global defaults and call out per-file muting via `0.0`.
+**Why:** Keep architecture documentation synchronized with the implemented audio configuration behavior.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
