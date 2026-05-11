@@ -2,7 +2,7 @@
 
 Offers NEW GAME, CONTINUE, LOAD GAME, and QUIT.
 Picking NEW GAME builds a default party and replaces the stack with
-the test world. Picking CONTINUE loads slot 1 and does the same.
+the overworld. Picking CONTINUE loads slot 1 and does the same.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from core.factories import party_member_from_data
 from core.scene import Scene
 from settings import (
     AssetPaths,
+    BattleSettings,
     ColorSettings,
     FontSettings,
     SaveSettings,
@@ -40,6 +41,9 @@ _DEFAULT_PARTY_IDS: tuple[str, ...] = ("kailo", "hina", "tawiri")
 def build_default_party(gm: "GameManager") -> Party:
     """Construct a fresh party from ``data/characters/`` content.
 
+    Seeds the starting potion stack into ``Party.inventory`` so a new
+    game's first battle has something to drink.
+
     Args:
         gm: The host game manager (provides the shared ``DataLoader``).
 
@@ -54,6 +58,7 @@ def build_default_party(gm: "GameManager") -> Party:
         if data is None:
             continue
         party.add(party_member_from_data(data))
+    party.inventory["potion"] = BattleSettings.STARTING_POTIONS
     return party
 
 
@@ -65,7 +70,7 @@ class TitleScene(Scene):
     def __init__(self, gm: "GameManager") -> None:
         """Construct the title screen menu."""
         super().__init__(gm)
-        from core.scenes.test_world_scene import TestWorldScene  # local: cycle.
+        from core.scenes.overworld_scene import OverworldScene  # local: cycle.
 
         any_save_exists = any(
             save.slot_exists(slot_id)
@@ -82,7 +87,11 @@ class TitleScene(Scene):
                 MenuItem("Quit", self.gm.close_game),
             ],
         )
-        self._test_world_cls = TestWorldScene
+        # Cached so ``_new_game`` / ``_continue`` don't re-import on
+        # every menu pick. ``TestWorldScene`` stays in the tree for now
+        # as a reference / fallback but is no longer reachable from the
+        # title screen.
+        self._world_cls = OverworldScene
 
     def on_enter(self) -> None:
         """Start looping ambient waves while the title screen is active."""
@@ -97,18 +106,18 @@ class TitleScene(Scene):
     # ------------------------------------------------------------------
 
     def _continue(self) -> None:
-        """Load slot 1 and replace the stack with the test world."""
+        """Load slot 1 and replace the stack with the overworld."""
         try:
             data = save.load(1)
         except (FileNotFoundError, ValueError):
             return
         self.gm.party = Party.from_dict(data.get("party", {}))
-        self.gm.scene_stack.replace(self._test_world_cls(self.gm))
-    
+        self.gm.scene_stack.replace(self._world_cls(self.gm))
+
     def _new_game(self) -> None:
-        """Replace the stack with a fresh test world and a default party."""
+        """Replace the stack with a fresh overworld and a default party."""
         self.gm.party = build_default_party(self.gm)
-        self.gm.scene_stack.replace(self._test_world_cls(self.gm))
+        self.gm.scene_stack.replace(self._world_cls(self.gm))
 
     def _load_game(self) -> None:
         """Load game entry point (currently mirrors CONTINUE behavior)."""
@@ -121,7 +130,7 @@ class TitleScene(Scene):
     def handle_event(self, event: pygame.event.Event) -> None:
         """
         Translate input into menu navigation.
-        
+
         Args:
             event: The pygame event to handle.
         """
@@ -138,7 +147,7 @@ class TitleScene(Scene):
     def render(self, surface: pygame.Surface) -> None:
         """
         Draw the title text and the menu.
-        
+
         Args:
             surface: The screen surface to draw on.
         """

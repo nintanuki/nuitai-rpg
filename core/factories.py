@@ -45,6 +45,11 @@ def party_member_from_data(data: dict[str, Any]) -> PartyMember:
 def combatant_from_party_member(member: PartyMember) -> Combatant:
     """Build the battle-time combatant for a party member.
 
+    HP is read from ``member.current_hp`` so a member who walked into
+    the encounter already injured starts the battle at that lower
+    health; max HP comes from ``member.stats["hp"]`` so a heal can
+    restore them to full.
+
     Args:
         member: The party member to drop into a battle.
 
@@ -54,14 +59,20 @@ def combatant_from_party_member(member: PartyMember) -> Combatant:
         Layer 1 will extend this to honour an active stance.
     """
     primary = Element(member.elements[0])
+    max_hp = int(member.stats.get("hp", 20))
+    # Floor current HP at 1 so a member who somehow saved at 0 still
+    # gets to participate; a Layer-1 "fainted" state will replace this
+    # with a proper KO path.
+    current_hp = max(1, min(member.current_hp, max_hp))
     return Combatant(
         combatant_id=member.id,
         name=member.name,
-        hp=member.stats.get("hp", 20),
+        hp=current_hp,
         attack=member.stats.get("attack", 6),
         element=primary,
         is_party=True,
         learnset=list(member.learnset),
+        max_hp=max_hp,
     )
 
 

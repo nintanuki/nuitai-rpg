@@ -1001,3 +1001,219 @@ def _music_volume_for(self, track_path: str) -> float: ...
 **After:** `"element": "lau"`
 **Why:** Hina's Heal is a Lau (nature) ability per the design — the wrong element id was a leftover from earlier scaffolding. Affects only the menu tint today; will matter later if Heal ever runs through the damage table (e.g. as a Mana / Lau augment-borne move).
 **Editor:** Frankie (Claude Opus 4.7)
+
+## 2026-05-11T06:49Z — Kick off the overworld scene (design pass; no code yet)
+
+**File:** docs/design/overworld.md (new file)
+**After:** New per-system design doc for the planned overworld scene. Covers (1) why the Adventure-shaped `World` abstraction is the seed and the Dungeon Digger inheritance is deliberately *not* dragged in, (2) the screen layout (640×384 cell area + 160-px full-width message box; inventory/map windows dropped and pushed into `MenuScene`), (3) the world model (char-grid cells, `CELLS` + `WORLD_LAYOUT` + `step_to_neighbor`), (4) the player (grid-stepped with pixel interpolation, ~150 ms per step, 4-directional, buffered input), (5) the scene wiring (opaque `OverworldScene` owning world + player + `TextBox`; pushes `MenuScene` on Start; will push `BattleScene` on encounter), (6) Pass-2 encounter / NPC / sign / warp design, (7) what intentionally stays out of Pass 1 and Pass 2, (8) the `settings.py` and `input_map.py` additions Pass 1 introduces, (9) Pass-1 and Pass-2 acceptance criteria, (10) revisit-later decisions.
+**Why:** Frankie's "talk to me" pass agreed the design before any code lands; this captures the decisions so Pass 1 implementation has a single source to refer back to and so future contributors can argue with the design instead of reverse-engineering it. `docs/ARCHITECTURE.md` is reserved for the code as it currently exists, so the planned design lives under `docs/design/` instead.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** docs/TODO.md
+**Lines (at time of edit):** new "Layer 3 — Overworld (parallel track, accelerated)" section inserted before "Cross-cutting / always-on"
+**Before:** TODO had Layer 0 (mostly done), Layer 1 (next), Layer 0.5 (deferrals), and cross-cutting sections only. Layer-3 overworld work had no actionable items.
+**After:** New section with three sub-headings — Pass 1 scaffolding, Pass 2 playable demo, open design questions. Pass 1 enumerates: new settings classes (`GridSettings`, `OverworldSettings`, `OverworldPlayerSettings`), tile color additions to `ColorSettings`, `is_left` / `is_right` helpers in `input_map`, new `core/world.py`, new `core/overworld_cells.py`, new `entities/overworld_player.py` package + module, new `core/scenes/overworld_scene.py`, scene-background registry entry, re-wiring `TitleScene._new_game` / `_continue` to push the overworld instead of the test world, save/load round-trip, doc updates. Pass 2 covers cells with placeholder art, interactables, dialogue/sign/warp dispatch, step-counted encounters, footstep + bump audio import from Dungeon Digger. Each list points at `docs/design/overworld.md` as the source of truth for the design.
+**Why:** Captures the parallel-track work in the same place every other actionable code task lives so it gets the same `[x]` discipline. Inserts under Layer 3 (its roadmap home) rather than Layer 1 to keep the layer story honest, with a note explaining the accelerated parallel start.
+**Editor:** Frankie (Claude Opus 4.7)
+
+## 2026-05-11T07:15Z — Overworld Pass 1: scaffolding lands
+
+**File:** .github/copilot-instructions.md
+**Lines (at time of edit):** new "Codebase survey discipline" section inserted between "Required reading order" and "The lore folder is read-only"
+**Before:** No guidance on how to verify file existence in a large repo; AI agents could (and did) hallucinate "file missing" conclusions from truncated globs.
+**After:** New section captures three rules: never conclude a file is missing from a single glob; prefer absolute-path glob patterns over relative ones on this project (the relative form has misbehaved on Windows here); watch for "Results are truncated" warnings and re-query narrower; cross-check load-bearing assumptions with `bash ls` / `find` / `grep`; ask the user when uncertain.
+**Why:** Captured at Frankie's request after two false "this file doesn't exist" turns in a row this session, both caused by truncated recursive globs against the now-large repository. Recording the lesson where future AI editors (and humans onboarding the project) will read it before touching code.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** settings.py
+**Lines (at time of edit):** `ColorSettings` (added `OVERWORLD_FLOOR` / `_WALL` / `_WATER` / `_SAND`), `BackgroundSettings.SCENE_BACKGROUNDS` (added `"OverworldScene": "nero"`), new classes `GridSettings`, `OverworldSettings`, `OverworldPlayerSettings` appended after `UISettings`.
+**Before:** No grid or overworld-specific tunables; no overworld scene-background mapping; no placeholder tile colors.
+**After:** `GridSettings.TILE_SIZE = 32`. `OverworldSettings` exposes a 20×12 cell at 640×384, centered horizontally at X=80 with TOP=40; the cell-tile alphabet (`WALL_CHAR`, `WATER_CHAR`, `SAND_CHAR`, `FLOOR_CHAR`) is declared here so cell data and renderer share one source of truth. `OverworldPlayerSettings` exposes `STEP_DURATION_MS=150`, the placeholder yellow color, the sprite size, and the spawn tile (cell center). The new `ColorSettings.OVERWORLD_*` entries are the Pass-1 tile colors; Pass 2 swaps them for sprite blits.
+**Why:** All new overworld tunables live in one place per project convention. Documenting tile chars in `OverworldSettings` rather than `core/overworld_cells.py` keeps the alphabet single-source-of-truth.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** ui/input_map.py
+**Lines (at time of edit):** new `MENU_KEYS` tuple; new public helpers `is_left`, `is_right`, `is_menu`, `read_held_direction`.
+**Before:** Only `is_confirm` / `is_cancel` / `is_up` / `is_down` event helpers existed; no polled direction reader.
+**After:** `is_left` and `is_right` mirror `is_up` / `is_down` for keyboard arrows, WASD, joy-hat horizontal, and left-stick X axis. `is_menu` reads `Tab` on keyboard and `START` on controller (the Esc keybind still belongs to the global quit). `read_held_direction(joysticks)` returns the currently-held cardinal `(dx, dy)` for polled movement — clamps to {-1, 0, +1} after summing keyboard + every joystick's D-pad and left stick.
+**Why:** Movement is grid-stepped with held-input feel; the cleanest pattern is to poll inside the player's `update` rather than reconfigure `pygame.key.set_repeat` globally (which would bleed into menus and text-box advance). Event helpers stay for the rare horizontal-menu case (`is_left` / `is_right`) and for the menu hotkey.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/world.py (new file)
+**After:** `World` class with `current_pos`, `current_cell_name`, `current_grid`, `is_wall`, `step_to_neighbor`, `to_dict`, `from_dict`. Walls and water both report as walls; out-of-bounds is non-wall so the player falls through to cell-transition logic in the player.
+**Why:** Shape lifted from Adventure's `core/world.py` (the predecessor project) but written fresh in Nuitai conventions: tile alphabet read from `OverworldSettings`, type-annotated, save/load round-trip baked in. This is the only module that knows the cell representation, so swapping char grids for JSON int-IDs (or adding a `current_layer` field for dungeons + interiors) is a local change.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/overworld_cells.py (new file)
+**After:** Two placeholder cells (`beach_west`, `beach_east`) each 12 rows × 20 cols of chars; matching openings at row 6 on the shared east/west inner edges so the player can walk between them. `WORLD_LAYOUT` maps `(0,0) -> beach_west`, `(1,0) -> beach_east`. `START_CELL_POS = (0, 0)`. A module-level `_validate_cells()` runs at import and raises `ValueError` if any cell is misshaped.
+**Why:** Smallest amount of content that lets Pass 1 exercise walking, wall collision, water collision (the `~~~~` patch in each cell's middle), sand walkability, and east-west cell transitions. Validation guards against the easy authoring typo where one row is one character short.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** entities/__init__.py (new file)
+**After:** Two-line package docstring explaining that `entities/` is reserved for pixel-space actors with their own update loop (overworld player today; future NPC sprites, party followers, ship sprites). Battle-side `Combatant`s stay in `systems/battle.py`.
+**Why:** New top-level package needs a marker file so Python recognises it. Adventure used `entities/`; Nuitai adopts the same pattern now that there is an actor with its own update + render loop.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** entities/overworld_player.py (new file)
+**After:** `OverworldPlayer` class. Logical position is `(col, row)` in cell-local tile coords. `_begin_step(dx, dy)` validates the move against `world.is_wall` and the cell edges; on an edge crossing it calls `world.step_to_neighbor` and snaps to the matching entry tile; on a wall hit the sprite turns to face the wall (no animation). `update(dt)` advances the pixel-interpolation animation over `OverworldPlayerSettings.STEP_DURATION_MS`, then polls `input_map.read_held_direction` at idle to start the next step. When the player holds two perpendicular directions, the currently-walked axis wins so corner-turning feels responsive. `render` draws the placeholder colored rectangle at the interpolated pixel position. `to_dict` / `from_dict` round-trip the logical `(col, row, facing)` triple.
+**Why:** This is the only contract anything else has with the player class — four facings, a `(col, row)`, a step animation. Pass 2 will replace the colored rect with sprite frames and Layer 4 may even swap the whole class for a smooth-motion implementation; both are local changes that do not ripple into `OverworldScene`.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/overworld_scene.py (new file)
+**After:** `OverworldScene(Scene)` with `OPAQUE = True`. Owns a `World`, an `OverworldPlayer`, and a `TextBox` (the existing widget, reused — no parallel `MessageLog` widget was introduced). `handle_event` advances the text box on confirm when it has content; otherwise opens the menu on `is_menu`. Movement is **not** routed through `handle_event` — it is polled by the player itself in `update`. `update(dt)` ticks the box and then the player only when the box is idle so the player cannot walk while reading. `render` paints scene background → cell tiles (one filled rect per tile, color keyed off the cell char) → player → text box. `to_dict` / `from_dict` capture the world and player state for future scene-stack persistence.
+**Why:** Closes the loop: NEW GAME now drops into a real exploration scene, walking works, cell transitions work, the menu hotkey works, and save/load is structurally ready. Pass 2 hooks (encounter rolls, NPC interaction, sign / warp dispatch) will slot into `update` and `handle_event` respectively.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/title_scene.py
+**Lines (at time of edit):** `__init__` (changed local import + cached attribute name), `_continue` and `_new_game` (use the new attribute)
+**Before:** Imported `TestWorldScene` and cached it on `self._test_world_cls`; both `_continue` and `_new_game` replaced the stack with `TestWorldScene(self.gm)`.
+**After:** Imports `OverworldScene`, caches it on `self._world_cls`, and replaces with the overworld in both paths. `TestWorldScene` is no longer reachable from the title screen but remains in the tree for reference.
+**Why:** Cuts the title screen over to the new exploration scene. The cached-class pattern is preserved so `_new_game` / `_continue` stay one-liners; the attribute is renamed `_world_cls` since "test world" is no longer accurate.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** docs/ARCHITECTURE.md
+**Lines (at time of edit):** §7 scenes list (added `overworld_scene.py` bullet, updated `test_world_scene.py` note); new §12a "Overworld scene and world model" (inserted before §13 UI); §14 source tree (added `core/world.py`, `core/overworld_cells.py`, `core/scenes/overworld_scene.py`, `entities/` package + `overworld_player.py`).
+**Before:** Architecture doc described the Layer-0 scenes only; no `entities/` package mentioned; no `World` / `OverworldPlayer` / `OverworldScene` documented.
+**After:** §12a documents the three collaborators (World, cell module, OverworldPlayer) and the scene that binds them, including the deliberate decision to poll movement inside the player rather than route it through `handle_event`. Pointer to `docs/design/overworld.md` for the design rationale. The "describes the code as it currently exists" rule is honored — the design doc holds the *planned* extensions (encounters, NPCs, warps) until Pass 2 ships.
+**Why:** Architecture doc tracks what exists in the tree; with Pass 1 landed, the new modules and the new scene now belong here.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** docs/TESTING.md
+**Lines (at time of edit):** new "Layer 3 — Overworld (Pass 1 scaffolding)" section inserted before "Sign-off"
+**Before:** Smoke checks covered Layer-0 only; no overworld-walking verification.
+**After:** Nine smoke checks for Pass 1: NEW GAME drops into the overworld, all four input devices move the placeholder square, wall and water tiles block movement (bumping still turns the sprite to face), east-edge crossing reaches `beach_east` and reverses, other edges no-op, the bottom strip is reserved for the message box but empty in Pass 1, `Tab` / `START` opens the translucent menu and `Resume` returns clean, save + quit to title + continue restores the party (full overworld position restore is a Layer-0.5 deferral), no `print` output.
+**Why:** Gives Frankie a deterministic in-window checklist to walk before signing off Pass 1.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** docs/TODO.md
+**Lines (at time of edit):** Layer 3 — Overworld (parallel track, accelerated) → Pass 1 scaffolding subsection
+**Before:** Every Pass-1 line item was `[ ]` (pending).
+**After:** Eleven Pass-1 lines marked `[x]` with parenthetical notes on the small design adjustments (held-input is polled rather than event-queued; cell module includes import-time validation; the to/from-dict path is wired but the live save payload still only stores the party — full scene-stack persistence is a Layer-0.5 deferral that the existing track already covers). The three remaining `[ ]` items (ARCHITECTURE update, TESTING smoke checks, CHANGELOG entries) are all completed in this same commit; they will be marked `[x]` in the next house-keeping pass once the manual TESTING walkthrough actually runs.
+**Why:** Keeps the TODO honest about what shipped in Pass 1 vs. what still needs Frankie's manual smoke run.
+**Editor:** Frankie (Claude Opus 4.7)
+
+## 2026-05-11T07:35Z — Overworld Pass 2: random encounters, HP / potion persistence, PARTY + INVENTORY screens
+
+**File:** settings.py
+**Lines (at time of edit):** new `EncounterSettings` class inserted before `OverworldPlayerSettings`
+**Before:** No encounter tunables — encounters were a Pass-2 design item with no implementation yet.
+**After:** `EncounterSettings.RATE_PER_STEP = 0.20` and `MIN_QUIET_STEPS = 4`. Comments document the meaning of each (probability per eligible step after the quiet window, and the post-spawn / post-battle eligibility threshold) and flag the production rate will be lower once Layer-1 content lands.
+**Why:** Step-counted random encounters need tunables in one place per project convention. Kept in their own `*Settings` class because they are not closely related to grid layout, player feel, or background palette.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** systems/party.py
+**Lines (at time of edit):** `PartyMember.__init__` (new `current_hp` argument), new `max_hp` property, `to_dict` (adds `current_hp` key), `from_dict` (reads `current_hp` with backward-compat fallback)
+**Before:** `PartyMember` carried `stats` only; current HP existed only as a transient field on the battle-side `Combatant` and evaporated when the battle ended.
+**After:** `current_hp` is a first-class field, initialised from `stats["hp"]` (max) when not supplied. `max_hp` is a convenience accessor that reads `stats["hp"]`. `to_dict` writes `current_hp`; `from_dict` falls back to max when the key is missing so saves written before this change load at full HP rather than crashing or zeroing.
+**Why:** Damage taken in battle has to roll forward into the overworld, the menu, and the save file. Putting it on `PartyMember` rather than a side-table keeps the contract clean: party state is one object, and serialisation is one round-trip.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** systems/battle.py
+**Lines (at time of edit):** `Combatant.__init__` (new optional `max_hp` argument; default keeps prior behavior)
+**Before:** `Combatant` initialised both `self.hp` and `self.max_hp` from the single `hp` constructor argument. A party member walking into a battle with chip damage couldn't be expressed.
+**After:** Optional `max_hp` argument; defaults to `hp` for backward compatibility (every enemy and every full-health spawn). When set, lets a member start the fight at less-than-max HP while still healing back to the proper ceiling.
+**Why:** Without the split, the only HP the factory could pass through was the max, so HP changes between fights were impossible to represent.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/factories.py
+**Lines (at time of edit):** `combatant_from_party_member`
+**Before:** `hp` and `max_hp` both came from `member.stats.get("hp", 20)` — every combatant spawned full-health.
+**After:** Reads `member.current_hp` for the combatant's starting HP and `stats["hp"]` for the max, clamping current to `[1, max]` so a 0-HP saved member still spawns at minimum (Layer-1 will replace the floor with a proper KO state).
+**Why:** This is the seam between persistent party state and battle simulation; HP carry-over has to happen here, not in `Combatant`.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/battle_scene.py
+**Lines (at time of edit):** import line (added `BattleSettings`), `__init__` (reads `Party.inventory["potion"]` and threads it into `Battle(potions=...)`), `_dispatch` (calls the new sync method on `BattleEndedEvent`), new `_sync_party_state_back` method
+**Before:** Potions defaulted to `BattleSettings.STARTING_POTIONS` every battle and never wrote back; party combatant HP was discarded when the scene popped.
+**After:** Potions come from `Party.inventory.get("potion", BattleSettings.STARTING_POTIONS)` on construction (legacy saves without the inventory key still get the seed count; first save afterwards is authoritative). On `BattleEndedEvent`, `_sync_party_state_back` walks `battle.party` and writes each combatant's HP back to its `PartyMember.current_hp` (clamped to max), then writes `battle.potions` back to `Party.inventory["potion"]`. Both writes happen before the scene pops, so the next save captures them and the next encounter starts from the right state.
+**Why:** Closes the round-trip: damage and potion use now persist across battles, across overworld walking, and across save files.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/title_scene.py
+**Lines (at time of edit):** import line (added `BattleSettings`), `build_default_party` (seeds `party.inventory["potion"]`)
+**Before:** New-game party had an empty inventory; potions only existed as a battle-local constant.
+**After:** `build_default_party` writes `party.inventory["potion"] = BattleSettings.STARTING_POTIONS` before returning, so a fresh game opens the menu and sees `POTION    x5` waiting in INVENTORY before the first encounter.
+**Why:** Once potions live on the party, the new-game seed has to happen somewhere — the title scene's party-construction path is the only place that runs for every new game.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** entities/overworld_player.py
+**Lines (at time of edit):** `__init__` (new `self.step_count` field), `update` (increments `step_count` when a step animation completes)
+**Before:** The player tracked step animation state but had no externally observable "I just stepped" signal.
+**After:** `step_count` is a monotonic int that increments only at successful animated step completion — not on wall-bumps (which never start an animation) and not on cell transitions (which snap instead of animating). Exactly the "the player just walked onto a new tile" signal an encounter system needs to roll against.
+**Why:** Keeps the encounter logic in the scene rather than the player; the player just exposes the fact, the scene decides what to do with it.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/overworld_scene.py
+**Lines (at time of edit):** import block (added `random`, added `EncounterSettings`), `__init__` (new `_last_seen_step_count` and `_quiet_steps` fields), `update` (calls the new roller), new `_update_encounter_rolls` and `_trigger_encounter` methods
+**Before:** The overworld walked the player around and never produced encounters; battles only existed by way of `TestWorldScene._fight`.
+**After:** On every new step the scene increments `_quiet_steps`; past `EncounterSettings.MIN_QUIET_STEPS` it Bernoulli-rolls against `RATE_PER_STEP`. On a hit, `_trigger_encounter` pushes the existing `BattleScene` and resets the quiet counter so the player gets a guaranteed window when the battle ends. Because the overworld scene was never destroyed, the player's position, facing, and step counter survive the fight unchanged.
+**Why:** The first half of "connect the overworld to battles."
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/menu_scene.py
+**Lines (at time of edit):** `__init__` (`Party` row enabled + wired to `_open_party`, `Inventory` row enabled + wired to `_open_inventory`), new `_open_party` and `_open_inventory` methods
+**Before:** Party and Inventory rows were grayed out with `_noop` actions; the menu had three usable rows (Save / Quit to Title / Resume).
+**After:** PARTY and INVENTORY are selectable and push the new status scenes; SETTINGS stays grayed out. The Layer-0 placeholder visual ("PARTY / INVENTORY are dimmed") is replaced by the actual feature for both rows.
+**Why:** Gives Frankie's save/load round-trip somewhere to *see* the persisted state.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/party_scene.py (new file)
+**After:** `PartyScene(Scene)` with `OPAQUE = True`. Renders the heading "PARTY" then one block per `PartyMember`: name + `HP <current> / <max>` (red when current_hp == 0) on the first line, the member's element pair on the second line tinted with `ColorSettings.ELEMENT_COLORS`. Cancel pops back to `MenuScene`. No sub-cursor, no equipment, no learnset display — strictly informational.
+**Why:** Gives Frankie a place to actually look at HP and confirm that damage taken in battle persisted. The richer party UI (equipment, learnset, status effects, swap order) is a Layer-1+ deliverable that this file's renderer extends in place.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/inventory_scene.py (new file)
+**After:** `InventoryScene(Scene)` with `OPAQUE = True`. Renders the heading "INVENTORY" then one row per `(item_id, count)` from `Party.inventory`, sorted by item id for stable display. Empty inventory renders "EMPTY." in gray. Cancel pops back to `MenuScene`.
+**Why:** Symmetric with PartyScene; gives Frankie a place to confirm the potion count round-trips through a battle and a save.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** docs/ARCHITECTURE.md
+**Lines (at time of edit):** §7 scene list (added party_scene + inventory_scene bullets, updated menu_scene bullet), new §12a.1 "Random encounters", new §12b "Persistent state from battle to overworld", §14 source tree (added party_scene.py, inventory_scene.py; annotated battle_scene.py + overworld_scene.py)
+**Before:** Architecture doc described the Pass-1 overworld and the unchanged battle scene; HP discarded between battles and potions were a battle-local constant — both unmentioned.
+**After:** §12a.1 documents the encounter roller (player step counter + scene's quiet-counter + Bernoulli trial + push-and-reset on hit). §12b documents the HP / potion writeback path: `PartyMember.current_hp` field, `Combatant.max_hp` split, `combatant_from_party_member` reading current vs. max, and `BattleScene._sync_party_state_back` running on `BattleEndedEvent`. Source tree gains the two new scenes.
+**Why:** Two large behavior changes landed in one pass; the architecture doc tracks the code as it is.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** docs/TESTING.md
+**Lines (at time of edit):** new "Layer 3 — Overworld (Pass 2 first cut)" section + "Known rough edges" subsection inserted before "Sign-off"
+**Before:** Pass-1 smoke checks covered walking, cell transitions, and the empty menu rows.
+**After:** Eleven new smoke checks for the encounter flow + PARTY/INVENTORY menus + HP save round-trip. Known rough edges call out the silent Save row, the cell-position-not-restored gap, the wipe-leaves-everyone-at-0 behavior, and the deliberately-high encounter rate for testing.
+**Why:** Gives Frankie a deterministic checklist to walk before signing off Pass 2.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** docs/TODO.md
+**Lines (at time of edit):** Layer 3 → Pass 2 subsection — five `[ ]` items flipped to `[x]` (encounters, HP persistence, potions-in-inventory, PARTY row, INVENTORY row); two items stay `[ ]` (footstep/bump audio with a note that the existing loop is the wrong shape for grid-stepped movement; mid-cell-transition save verification).
+**Before:** Every Pass-2 item was pending.
+**After:** Five Pass-2 items completed and marked; the remaining Pass-2 items (cell art, sprite art, NPCs, sign tiles, warp tiles, audio, mid-transition save verify) are still open. The TODO honestly shows which Pass-2 work has shipped and which hasn't.
+**Why:** Keep the TODO honest.
+**Editor:** Frankie (Claude Opus 4.7)
+
+## 2026-05-11T08:00Z — Stop the bleeding on truncation-then-bash-append
+
+**File:** core/scenes/overworld_scene.py
+**Lines (at time of edit):** 251–327 (deleted)
+**Before:** The file had two copies of the render method + helpers + persistence section. The first (lines 174–250) was correct; the second was an orphan starting with the dangling token `ace) -> None:` that came from a bash append done against an apparently-truncated Linux-mount view of the file while the Windows side was actually complete. Python rejected the file with "unmatched ')'" at line 251.
+**After:** File ends at line 250 with `return scene` — one render method, one set of helpers, one persistence section.
+**Why:** OneDrive's sync layer resolved my earlier bash append as a delta against the complete Windows file rather than the truncated mount view, producing duplicates rather than the intended completion.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** entities/overworld_player.py
+**Lines (at time of edit):** 263–288 (deleted)
+**Before:** Same shape as overworld_scene.py — proper to_dict / from_dict ending at line 262, then an orphan tail with weirdly-indented `"col": self.col,` and a duplicate from_dict.
+**After:** File ends at line 262 with `self._snap_to_logical()` — one to_dict, one from_dict.
+**Why:** Same root cause: bash append against a stale mount view duplicated content rather than completing a truncated file.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/title_scene.py
+**Lines (at time of edit):** 170–171 (deleted)
+**Before:** Orphan two-line tail `EM_SPACING,\n        )` past the proper `self.menu.render(...)` close at line 169, leftover from an earlier bash repair. Python rejected the file with "unexpected indent" at line 171.
+**After:** File ends at line 169.
+**Why:** Same root cause; this file had been cleaned once before but OneDrive resurrected the orphan version on a later sync round.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** .github/copilot-instructions.md
+**Lines (at time of edit):** new "File-repair discipline (when a file looks broken)" section inserted between "Codebase survey discipline" and "The lore folder is read-only"
+**Before:** No guidance on how to repair a file that appears truncated. Future AI editors would walk into the same trap: see a mount-view truncation, bash-append the missing tail, and produce duplicated content on the canonical side.
+**After:** Two rules: (1) never bash-append against the Linux mount to repair "truncation" — re-read through the Read tool first to check whether the file was actually broken or just stale on the mount; (2) use the Edit tool for surgical repairs because it operates on the canonical Cowork view that the user actually runs. Includes the AST cross-check pattern as a tiebreaker when the two views disagree.
+**Why:** This trap cost three rounds of "file's broken / no it's not / actually yes" in the Pass-2 session; the lesson is worth recording where future editors will read it.
+**Editor:** Frankie (Claude Opus 4.7)

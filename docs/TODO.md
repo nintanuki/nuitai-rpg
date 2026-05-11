@@ -105,6 +105,54 @@
 
 ---
 
+## Layer 3 — Overworld (parallel track, accelerated)
+
+> The tile-and-sprite overworld is officially a Layer-3 deliverable, but it is being kicked off early so it can advance in parallel with the Layer-1 text demo / battle polish. The point is to build the bones inside the existing scene-stack engine; Layer-3 *content* (real tilesets, real sprites, ship scenes) still waits its turn.
+>
+> Full design: [docs/design/overworld.md](design/overworld.md). Read it before picking up any task here.
+
+### Pass 1 — scaffolding (no playable demo yet)
+
+- [x] Add `GridSettings`, `OverworldSettings`, `OverworldPlayerSettings` to [settings.py](../settings.py). Document units in comments.
+- [x] Add overworld tile colors to `ColorSettings` (`OVERWORLD_FLOOR`, `OVERWORLD_WALL`, `OVERWORLD_WATER`, `OVERWORLD_SAND`).
+- [x] Add `is_left` and `is_right` helpers to [ui/input_map.py](../ui/input_map.py), mirroring `is_up` / `is_down`. (Also added `is_menu` for the Tab / START hotkey and `read_held_direction` for polled movement input.)
+- [x] Create `core/world.py`: `World` class with `current_pos`, `is_wall`, `step_to_neighbor`, lifted in shape from Adventure's `core/world.py`.
+- [x] Create `core/overworld_cells.py`: two test cells (`beach_west`, `beach_east`) with matching openings on their shared edge, plus `WORLD_LAYOUT` and `START_CELL_POS`. (Includes an import-time `_validate_cells()` that fails loudly on misshaped grids.)
+- [x] Create `entities/overworld_player.py` (new package): grid-stepped player with pixel interpolation, facing direction, buffered-input queue, axis-separated `is_wall` checks, edge-crossing → `World.step_to_neighbor`. (Buffered "queue" landed as polled held-input instead — see [docs/design/overworld.md](design/overworld.md) §4 follow-up; same end behavior, no global `pygame.key.set_repeat` needed.)
+- [x] Create `core/scenes/overworld_scene.py`: opaque scene that owns world + player + text box; routes input through `input_map`; pushes `MenuScene` on Start.
+- [x] Add `BackgroundSettings.SCENE_BACKGROUNDS["OverworldScene"]` template.
+- [x] Re-wire `TitleScene._new_game` and `_continue` to `replace(OverworldScene(...))`. Leave `TestWorldScene` in the tree for reference.
+- [x] Extend `to_dict` / `from_dict` round-trip so the overworld scene is fully saveable. (World + player both serialise; full scene-stack persistence remains a Layer-0.5 deferral — the save payload still writes only `party` today.)
+- [x] Update [docs/ARCHITECTURE.md](ARCHITECTURE.md) with current-systems sections for `World`, `OverworldPlayer`, `OverworldScene` once they land.
+- [x] Add overworld smoke checks to [docs/TESTING.md](TESTING.md).
+- [x] Append a [docs/CHANGELOG.md](CHANGELOG.md) entry per file touched.
+- [ ] **Run the Pass-1 manual smoke checks in [TESTING.md](TESTING.md) §22–30 and sign off.** (Pending Frankie's machine — sandbox has no pygame/display.)
+
+### Pass 2 — playable demo
+
+- [ ] Author two or three real cells with placeholder tile art chosen for Nuitai's tropical-island setting (no Dungeon Digger dungeon assets).
+- [ ] Source a placeholder player sprite set (4 facings; static, no walk cycle yet). Credit in README.
+- [ ] Add a static `interactables` dict to cell data and a "tile in front of me" interaction dispatch in `OverworldScene`.
+- [ ] Wire one NPC tile through `DialogueRunner` + `TextBox` (re-use the path `TestWorldScene._talk` already exercises).
+- [ ] Wire one sign tile (push text onto the box).
+- [ ] Wire one warp tile (cross-cell teleport with sprite snap).
+- [x] Step-counted random encounter system: rate + min-quiet-steps; push real `BattleScene` on hit; reset counter on battle resolution. (Global rate for now via `EncounterSettings`; per-cell tables are a follow-up once cell data migrates to JSON.)
+- [x] Persist per-member current HP across battles and saves. Added `PartyMember.current_hp`, separated `Combatant.max_hp` from initial `hp`, wrote HP back at `BattleEndedEvent`, taught `Party.from_dict` to default to max when the field is missing for backward-compat.
+- [x] Migrate potions from a battle-local pool to `Party.inventory["potion"]`. New games seed 5; battles read at construction and write the survivor count back at end.
+- [x] Enable the PARTY menu row → new `PartyScene` showing each member's name + HP/max HP + element pair.
+- [x] Enable the INVENTORY menu row → new `InventoryScene` listing inventory rows.
+- [ ] Import `sfx_movement_footstepsloop4_slow.ogg` and `wall_bump_sound_effect.ogg` from Dungeon Digger; register in `AudioSettings.SOUND_EFFECTS`; play on step-complete and bump. (Footstep loop is wrong shape for grid-stepped movement — Pass-2 footstep audio probably wants a discrete tap; revisit when sourcing audio.)
+- [ ] Verify save/load mid-cell-transition and mid-dialogue resume cleanly.
+- [ ] Update CHANGELOG / ARCHITECTURE / TESTING / TODO marks for the remaining `[ ]` items.
+
+### Open design questions (revisit when needed)
+
+- [ ] Decide if/when to migrate cells from `core/overworld_cells.py` module to `data/cells/*.json` via `DataLoader`.
+- [ ] Decide if `TextBox` should grow a `render_empty_frame` option for always-visible message-box chrome.
+- [ ] Decide what keyboard key opens the menu (probably `Tab` or `Enter` — `Enter` collides with confirm).
+
+---
+
 ## Cross-cutting / always-on
 
 - [ ] Append a [docs/CHANGELOG.md](CHANGELOG.md) entry for every meaningful change. (House rule.)

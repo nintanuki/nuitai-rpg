@@ -35,8 +35,8 @@ class MenuScene(Scene):
         super().__init__(gm)
         self.menu = Menu(
             items=[
-                MenuItem("Party", self._noop, enabled=False),
-                MenuItem("Inventory", self._noop, enabled=False),
+                MenuItem("Party", self._open_party),
+                MenuItem("Inventory", self._open_inventory),
                 MenuItem("Save", self._save),
                 MenuItem("Settings", self._noop, enabled=False),
                 MenuItem("Quit to Title", self._quit_to_title),
@@ -54,6 +54,18 @@ class MenuScene(Scene):
 
     def _noop(self) -> None:
         """Placeholder for unimplemented commands."""
+
+    def _open_party(self) -> None:
+        """Push the read-only party status screen."""
+        from core.scenes.party_scene import PartyScene  # local: cycle.
+
+        self.gm.scene_stack.push(PartyScene(self.gm))
+
+    def _open_inventory(self) -> None:
+        """Push the read-only inventory list screen."""
+        from core.scenes.inventory_scene import InventoryScene  # local: cycle.
+
+        self.gm.scene_stack.push(InventoryScene(self.gm))
 
     def _save(self) -> None:
         """Persist the current party to slot 1."""

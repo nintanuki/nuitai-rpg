@@ -64,23 +64,30 @@ class Combatant:
         element: Element,
         is_party: bool,
         learnset: list[str] | None = None,
+        max_hp: int | None = None,
     ) -> None:
         """Construct a combatant.
 
         Args:
             combatant_id: Stable id, e.g. a party member or enemy id.
             name: Display name.
-            hp: Starting and max HP.
+            hp: Starting HP for this battle. May be less than ``max_hp``
+                if the party member walked in already damaged.
             attack: Base attack stat (multiplied by element matchup).
             element: The combatant's primary element.
             is_party: True for party members, False for enemies.
             learnset: Optional list of ability ids this combatant
                 knows. Resolved at command time through the battle's
                 ability content pack.
+            max_hp: Optional cap. Defaults to ``hp`` for the common
+                "spawning at full health" case (every enemy, every
+                pre-damage party member); party members who walked in
+                with chip damage pass their full max here so heals
+                still bring them all the way back.
         """
         self.id = combatant_id
         self.name = name
-        self.max_hp = hp
+        self.max_hp = hp if max_hp is None else max_hp
         self.hp = hp
         self.attack = attack
         self.element = element

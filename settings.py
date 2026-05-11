@@ -15,6 +15,15 @@ class ColorSettings:
     BG_COLOR = NERO
     OVERLAY_BACKGROUND = BLACK
 
+    # Overworld tile placeholder colors. Replaced by tile sprite blits
+    # in Pass 2 once we have real art chosen for Nuitai's island
+    # setting. Until then these are how the cell area visually
+    # distinguishes one terrain type from another.
+    OVERWORLD_FLOOR = (110, 160, 90)    # grass green; walkable
+    OVERWORLD_WALL = (90, 70, 60)       # rocky brown; impassable
+    OVERWORLD_WATER = (60, 130, 180)    # ocean blue; impassable
+    OVERWORLD_SAND = (220, 200, 140)    # sandy beige; walkable
+
     # Per-element accent colors. Used by menus / UI labels to flag the
     # affinity of an ability or item at a glance. Tuned for readability
     # on the black command-panel background — Ahi and Wai are *lighter*
@@ -51,6 +60,7 @@ class BackgroundSettings:
         "TestWorldScene": "nero",
         "BattleScene": "nero",
         "MenuScene": "nero",
+        "OverworldScene": "nero",
     }
 
     DEFAULT_TEMPLATE: str = "nero"
@@ -201,3 +211,65 @@ class UISettings:
     TITLE_SCREEN_HEADING_Y = 90
     TITLE_SCREEN_MENU_X = 90
     TITLE_SCREEN_MENU_TOP_Y = 290
+
+
+class GridSettings:
+    """Tile dimensions for the overworld grid."""
+
+    TILE_SIZE = 32  # Pixels per overworld tile.
+
+
+class OverworldSettings:
+    """Cell-area layout for the overworld scene.
+
+    One cell is a fixed grid of tiles that fills the visible action
+    window. Crossing the edge swaps to the matching neighbor cell in
+    ``WORLD_LAYOUT`` and snaps the sprite to its entry tile. Screen-
+    locked — no scrolling camera at this layer.
+    """
+
+    COLS = 20  # Tiles wide per cell.
+    ROWS = 12  # Tiles tall per cell.
+    PIXEL_W = COLS * GridSettings.TILE_SIZE   # 640 px.
+    PIXEL_H = ROWS * GridSettings.TILE_SIZE   # 384 px.
+    X = (ScreenSettings.WIDTH - PIXEL_W) // 2  # Centered horizontally.
+    Y = 40                                     # Top margin.
+
+    # Wall character recognised by World.is_wall. Walls block the
+    # player's step; the cell renderer paints them in OVERWORLD_WALL.
+    WALL_CHAR = "#"
+    # Walkable / impassable variants. Each one paints a distinct
+    # placeholder color in the cell renderer. Pass 2 swaps these for
+    # tile sprite blits.
+    WATER_CHAR = "~"  # Impassable; visually distinct from rock walls.
+    SAND_CHAR = "_"   # Walkable; alt-floor flavor for paths/beaches.
+    FLOOR_CHAR = "."  # Walkable default.
+
+
+class EncounterSettings:
+    """Step-counted random-encounter parameters for the overworld.
+
+    Pass-2 first cut uses one global rate; Pass-2 follow-up moves to
+    per-cell tables (rate + min-quiet + enemy list) read from the cell
+    data once cells migrate to JSON. The eligibility window (the first
+    ``MIN_QUIET_STEPS`` steps after a fresh load or a finished battle)
+    guarantees the player isn't immediately re-engaged.
+    """
+
+    # Probability per *eligible* step (after the quiet window) that an
+    # encounter fires. 0.20 means ~5 steps on average past the quiet
+    # window before a hit; the Layer-1 production value will be lower.
+    RATE_PER_STEP = 0.20
+    # Minimum number of steps after spawn / after the last battle
+    # before any encounter can roll. Pure-quiet pacing window.
+    MIN_QUIET_STEPS = 4
+
+
+class OverworldPlayerSettings:
+    """Tunable values for the overworld player sprite."""
+
+    STEP_DURATION_MS = 150            # Walk animation duration per tile.
+    COLOR = ColorSettings.YELLOW      # Pass-1 placeholder fill.
+    SIZE = GridSettings.TILE_SIZE     # Visual size; matches tile size for Pass 1.
+    SPAWN_COL = OverworldSettings.COLS // 2  # Center column on first spawn.
+    SPAWN_ROW = OverworldSettings.ROWS // 2  # Center row on first spawn.

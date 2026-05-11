@@ -17,6 +17,29 @@ Nuitai RPG is a long-horizon, layered project. The artistic vision in [docs/VISI
 
 If a question is asked about *why* code was written a certain way, that is a request for an **explanation**, not a request for a code change. Do not modify code unless the user explicitly asks for a change.
 
+## Codebase survey discipline
+
+This repo has grown beyond the size at which a single recursive glob is reliable. The `docs/lore/` directory alone contains ~100+ articles; a `**/*` sweep over the root will hit truncation limits and return a **prefix** of the file list with a warning that is easy to overlook. Add up the rest of the source and content directories and the same risk applies to any wide search.
+
+Rules to avoid silently building a mental model from a partial view:
+
+- **Never conclude that a file does not exist from a single glob.** If a file is referenced by another file you have read (an import, a doc link, a `from x.y import Z`) and a glob says it is missing, the glob is wrong before the codebase is. Verify with a targeted `bash ls` / `find` / `grep` against the absolute path before stating "this file is missing" to the user.
+- **Prefer absolute-path glob patterns** (`C:\full\path\to\dir\**\*.py`) over relative ones with a `path:` parameter on this project. The relative form has misbehaved on Windows here at least twice.
+- **Watch for truncation warnings** on any glob that returns close to its result cap. If you see "Results are truncated," treat the result as a prefix only — re-query with a tighter pattern (single subdirectory, single extension) and stitch the picture together from multiple narrower calls.
+- **Cross-check with `bash`** for anything load-bearing: `ls -la`, `find <path> -name "<pattern>"`, `wc -l`, `tail`. These run in the Linux workspace mount and have not exhibited the truncation issue.
+- **When in doubt, ask.** It is cheaper to ask "I'm not seeing X — is it really missing?" than to spend a turn confidently announcing a non-fact and the next turn apologising for it.
+
+## File-repair discipline (when a file looks broken)
+
+The Linux sandbox mount, the Cowork-side cache, and the canonical Windows file are three views of the same file. They can diverge mid-edit, especially while OneDrive is reconciling. A file that looks truncated mid-token on one side may be complete on another.
+
+Two rules learned the hard way:
+
+- **Do not bash-append to repair "truncation" on the Linux mount.** The mount may be showing a stale snapshot of a file that is actually complete on the Windows / Cowork side. A bash `cat >> file` against the mount gets resolved by OneDrive as a delta against the complete file — your append lands *after* the already-correct content, producing two copies of whatever you appended. The user's Python then hits the orphan first line and reports a syntax error that did not exist a moment ago.
+- **Use the Edit tool for surgical repairs.** Edit operates on the canonical Cowork view, which is what the user actually opens and what `python main.py` reads. If you see a file looks broken, first re-read the same byte range through the Read tool — if Read shows a clean file, the bash view was stale and there was never a problem to fix. If Read shows duplicate or orphan content, use Edit with the orphan block as `old_string` and the empty (or merged) block as `new_string`.
+
+If a file is genuinely incomplete in both views and you need to add content, use Write or Edit, not bash. Cross-check by running `python -c "import ast; ast.parse(open('path').read())"` against the same file via the Linux mount — if it parses there, it should parse for the user; if Cowork and Linux disagree, trust Cowork.
+
 ## The lore folder is read-only
 
 The articles under [docs/lore/](../docs/lore/) are the authoritative world bible, maintained **outside** this repo (currently on World Anvil and imported via `utils/lore_to_markdown.py`). They are **never** edited from inside this repo — not by humans, not by AI assistants, not by linters or formatters. Read them freely for context; do not write to them.

@@ -83,10 +83,13 @@ A `Scene` ([core/scene.py](../core/scene.py)) is one screenful of game state —
 
 Layer-0 scenes:
 
-- [core/scenes/title_scene.py](../core/scenes/title_scene.py) — NEW GAME / CONTINUE / LOAD GAME / QUIT. CONTINUE and LOAD GAME are disabled when no save exists. Loops `waves.ogg` while the scene is active.
-- [core/scenes/test_world_scene.py](../core/scenes/test_world_scene.py) — placeholder room with TALK / FIGHT / SAVE / QUIT TO TITLE commands.
+- [core/scenes/title_scene.py](../core/scenes/title_scene.py) — NEW GAME / CONTINUE / LOAD GAME / QUIT. CONTINUE and LOAD GAME are disabled when no save exists. Loops `waves.ogg` while the scene is active. NEW GAME and CONTINUE both replace the stack with `OverworldScene`.
+- [core/scenes/overworld_scene.py](../core/scenes/overworld_scene.py) — the grid-stepped, screen-locked exploration scene. Owns a `World`, an `OverworldPlayer`, and a `TextBox`; pushes `MenuScene` on `Tab` / `START`. See §12a for the world model and player behavior, and [docs/design/overworld.md](design/overworld.md) for the full design.
+- [core/scenes/test_world_scene.py](../core/scenes/test_world_scene.py) — Layer-0 placeholder room with TALK / FIGHT / SAVE / QUIT TO TITLE commands. Still in the tree for reference but no longer reachable from the title screen.
 - [core/scenes/battle_scene.py](../core/scenes/battle_scene.py) — hosts a `Battle` and a `BattleView`; resolves to victory, defeat, or flee. While a party member's turn waits on input, the bottom HUD splits into a left-side command panel (Attack / Defend / Ability / Potion x{N}) and a right-side prompt; choosing Ability swaps the panel for the active actor's ability submenu (cancel returns to the top level). Outside of awaiting-command moments the full bottom bar reverts to the standard text box. The active combatant's roster line renders in `ColorSettings.YELLOW` so the player always knows whose turn it is.
-- [core/scenes/menu_scene.py](../core/scenes/menu_scene.py) — translucent pause overlay (`OPAQUE = False`) with party / inventory / save / settings / quit-to-title rows.
+- [core/scenes/menu_scene.py](../core/scenes/menu_scene.py) — translucent pause overlay (`OPAQUE = False`) with party / inventory / save / settings / quit-to-title rows. The PARTY and INVENTORY rows push the dedicated status scenes below; SETTINGS is still a placeholder.
+- [core/scenes/party_scene.py](../core/scenes/party_scene.py) — read-only roster (name, current HP / max HP, element pair) used to verify HP persistence end-to-end. Cancel pops back to `MenuScene`.
+- [core/scenes/inventory_scene.py](../core/scenes/inventory_scene.py) — read-only item list (item id + count) from `Party.inventory`. Cancel pops back to `MenuScene`.
 
 ## 7a. Scene backgrounds — template registry
 
@@ -162,6 +165,44 @@ The seam from JSON dict to runtime gameplay object lives in [core/factories.py](
 - [systems/battle.py](../systems/battle.py) — `Combatant` and `Battle`: turn-queue logic. Pure data; emits events; never draws. The scene drives a battle in two beats: `start_turn()` advances the queue, emits `TurnStartEvent`, and **resolves enemy actions inline**; for a party actor it parks the battle in *awaiting-command* mode (`is_awaiting_command()`) until the scene calls one of `submit_attack`, `submit_defend`, `submit_ability(ability_id)`, or `submit_potion`. `Combatant.is_defending` halves incoming damage (per `BattleSettings.DEFEND_DAMAGE_DIVISOR`) until the defender's own next turn. Potions are a shared pool seeded from `BattleSettings.STARTING_POTIONS`. Turn order is the simple sequential `party + enemies` rotation; the eventual destination is an **FFX-style Conditional Turn-Based** queue driven by per-combatant speed and weighted by action cost — the command interface above is shaped so that swap is an internal change to this module only.
 - [systems/dialogue.py](../systems/dialogue.py) — `DialogueRunner`: walks a JSON dialogue tree and emits `DialogueLineEvent`s, then `DialogueEndedEvent`.
 
+## 12a. Overworld scene and world model
+
+The Layer-3 destination — exploration on a tile grid — was kicked off early in Pass 1 and lives alongside the text-mode Layer-0 scenes. The overworld decomposes into three collaborators bound together by [core/scenes/overworld_scene.py](../core/scenes/overworld_scene.py):
+
+- [core/world.py](../core/world.py) — `World`: owns `current_pos` (the active cell coordinate), exposes `is_wall(col, row)` (treats walls and water as impassable; out-of-bounds is non-wall so the player can fall through to the cell-transition path) and `step_to_neighbor(dx_cells, dy_cells)` (swaps to the named cell at the offset in `WORLD_LAYOUT`, returns False when no neighbor exists). Round-trips through `to_dict` / `from_dict` so saved games restore the active cell.
+- [core/overworld_cells.py](../core/overworld_cells.py) — static module-level `CELLS`, `WORLD_LAYOUT`, and `START_CELL_POS`. Cells are char grids; the alphabet (`'.'` floor, `'#'` wall, `'~'` water, `'_'` sand) lives in `OverworldSettings.*_CHAR` so cells and code share one source of truth. `_validate_cells()` runs at import time and raises `ValueError` if any cell is misshaped. Migrating to `data/cells/*.json` is a Pass-2 decision.
+- [entities/overworld_player.py](../entities/overworld_player.py) — `OverworldPlayer`: grid-stepped logical position (`col`, `row`) with pixel-interpolation animation over `OverworldPlayerSettings.STEP_DURATION_MS`. Held-input is polled inside `update` via [ui/input_map.py](../ui/input_map.py)'s `read_held_direction(joysticks)`; pressing two perpendicular directions keeps the dominant axis. Wall collisions and cell edges are both checked in `_begin_step` — walking into a wall just turns the sprite to face it (no animation); stepping over an edge calls `World.step_to_neighbor` and snaps the sprite to the matching entry tile.
+
+`OverworldScene` (`OPAQUE = True`) owns one of each plus a shared `TextBox`. Its frame work is the same shape every other scene uses:
+
+- **`handle_event`** — when the text box has content, confirm advances it and other keys fall through silently (so a held direction does not queue steps that fire the instant the player closes a dialogue); when the box is idle, `is_menu` (`Tab` keyboard or `START` controller) pushes `MenuScene` onto the stack. Movement is **not** event-driven — it is read polled in `OverworldPlayer.update`.
+- **`update`** — ticks the text box, then ticks the player only when the box is idle (so the player cannot walk while reading).
+- **`render`** — scene-background → cell grid (one filled rect per tile, color keyed off the cell char via the local `_TILE_COLORS` table) → player → text box.
+
+The scene serialises through `to_dict` / `from_dict` (capturing both `world.to_dict()` and `player.to_dict()`), but the live save-payload schema still writes only `party`; restoring the overworld scene on load is a Layer-0.5 follow-up that the deferred scene-stack-in-save task tracks.
+
+The new `entities/` package is reserved for **pixel-space actors** — anything with a screen position, a facing, and an update loop of its own (NPCs, party followers, ship sprites). Battle-side `Combatant`s stay in [systems/battle.py](../systems/battle.py); the split is "moves around a screen" vs. "appears in a turn queue."
+
+### 12a.1. Random encounters
+
+[`OverworldScene`](../core/scenes/overworld_scene.py) tracks an `_last_seen_step_count` against `OverworldPlayer.step_count` (a monotonic counter the player increments at the end of each animated step). On every newly-completed step the scene increments a running `_quiet_steps` counter; once `EncounterSettings.MIN_QUIET_STEPS` is satisfied, each subsequent step is a Bernoulli trial against `EncounterSettings.RATE_PER_STEP`. On a hit, the scene pushes the existing `BattleScene` and resets `_quiet_steps` so the player gets a guaranteed quiet window after the fight.
+
+The battle scene was already self-popping on `BattleEndedEvent`; the overworld didn't need any "on resume" hook to bring itself back. Because the overworld scene was never destroyed, the player's `(col, row)`, facing, and step counter all survive the fight unchanged.
+
+The encounter rate, threshold, and the enemy pool stay global for Pass 2 — `BattleScene._build_enemies` rolls from its existing `_DEMO_ENEMY_IDS` tuple. Per-cell encounter tables (different enemy lists for beach vs. jungle vs. temple) land when cell content migrates from `core/overworld_cells.py` to `data/cells/*.json`.
+
+## 12b. Persistent state from battle to overworld
+
+Two pieces of state need to survive a battle and roll back up through the save file: per-member current HP, and the shared potion stack. Both were previously battle-local — combatants spawned at full HP, potions reset to `BattleSettings.STARTING_POTIONS` every fight — so damage and potion use silently evaporated the moment the player won.
+
+The fix is split across three modules:
+
+- [`PartyMember`](../systems/party.py) gained a `current_hp: int` field, initialised from `stats["hp"]` (the member's max). It serialises in `to_dict` / `from_dict`; loads of older saves without the field default to max, so legacy save files keep loading at full health.
+- [`Combatant`](../systems/battle.py) gained a `max_hp` constructor argument that defaults to `hp` for the common case (enemies always spawn at full health, so `hp == max_hp` and no caller needs to pass it). [`combatant_from_party_member`](../core/factories.py) uses `member.current_hp` for the combatant's starting HP and `stats["hp"]` for the max, so a damaged member walks into the battle already injured. A floor at 1 protects against a 0-HP-saved member spawning dead on contact (proper KO handling is a Layer-1 deliverable).
+- [`BattleScene`](../core/scenes/battle_scene.py) reads `Party.inventory.get("potion", BattleSettings.STARTING_POTIONS)` at construction (so a brand-new game or an old save without the inventory key still gets the default starter stack) and runs `_sync_party_state_back` the instant `BattleEndedEvent` arrives — that method writes each combatant's HP back to its `PartyMember` (clamped to max) and writes the surviving potion count back to `Party.inventory["potion"]`.
+
+Once a battle has run, `Party.inventory["potion"]` is authoritative for every subsequent fight; the `BattleSettings.STARTING_POTIONS` constant only matters for the new-game seed in [`build_default_party`](../core/scenes/title_scene.py) and as a one-time migration fallback for old saves.
+
 ## 13. UI
 
 - [ui/text_renderer.py](../ui/text_renderer.py) — the **only** module that draws text. Word-wraps to a max width, caches fonts per (path, size), enforces ALL CAPS at the renderer so gameplay code can pass any case.
@@ -183,11 +224,18 @@ core/
   save.py                       Versioned JSON save/load + migrations.
   data_loader.py                JSON content-pack loader.
   factories.py                  JSON-dict -> runtime-object factories.
+  world.py                      Overworld cell pointer + is_wall + step_to_neighbor.
+  overworld_cells.py            Static cell grids + WORLD_LAYOUT (Pass-1 placeholders).
   scenes/
     title_scene.py              Title screen.
-    test_world_scene.py         Layer-0 placeholder room.
-    battle_scene.py             Hosts Battle + BattleView.
+    test_world_scene.py         Layer-0 placeholder room (in-tree reference; unreachable).
+    overworld_scene.py          Grid-stepped exploration scene + encounter rolls.
+    battle_scene.py             Hosts Battle + BattleView; syncs HP and potions back at end.
     menu_scene.py               Pause overlay.
+    party_scene.py              Read-only party status (name, HP/max HP, elements).
+    inventory_scene.py          Read-only inventory list.
+entities/
+  overworld_player.py           Grid-stepped player with pixel-interpolation animation.
 systems/
   audio_manager.py              Data-driven music + SFX dispatcher.
   party.py                      Serialisable party state.

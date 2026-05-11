@@ -44,7 +44,7 @@ from core.factories import (
     combatant_from_party_member,
 )
 from core.scene import Scene
-from settings import ColorSettings, FontSettings, ScreenSettings, UISettings
+from settings import BattleSettings, ColorSettings, FontSettings, ScreenSettings, UISettings
 from systems.battle import Battle, Combatant
 from ui import input_map, text_renderer
 from ui.battle_view import BattleView
@@ -108,10 +108,21 @@ class BattleScene(Scene):
         super().__init__(gm)
         self.abilities = self.gm.data.load("abilities")
         characters = self.gm.data.load("characters")
+        # Potions are a Party-level resource that persists across
+        # battles. Read the current count from ``Party.inventory``; if
+        # the inventory entry is missing entirely (old save format,
+        # never been to a battle), fall back to the new-game starter
+        # count so the player isn't silently emptied out. Once a battle
+        # runs and the survivor count is written back, the inventory
+        # value is authoritative on every subsequent fight.
+        starting_potions = gm.party.inventory.get(
+            "potion", BattleSettings.STARTING_POTIONS
+        )
         self.battle = Battle(
             party_combatants=_build_party_combatants(self.gm.party, characters),
             enemy_combatants=_build_enemies(self.gm),
             abilities=self.abilities,
+            potions=starting_potions,
         )
         self.text_box = TextBox()
         self.view = BattleView(self.text_box)
@@ -201,6 +212,28 @@ class BattleScene(Scene):
             self.view.consume(ev)
             if isinstance(ev, BattleEndedEvent):
                 self._battle_finished = True
+                self._sync_party_state_back()
+
+    def _sync_party_state_back(self) -> None:
+        """Write battle-mutated state back onto the persistent ``Party``.
+
+        Called exactly once, the moment the battle emits its
+        ``BattleEndedEvent``. Pushes each surviving party combatant's
+        current HP back onto the matching ``PartyMember`` so damage
+        carries into the overworld and into the next save. Also writes
+        the surviving potion count back onto ``Party.inventory`` so
+        consumables persist across battles instead of resetting every
+        fight.
+        """
+        for combatant in self.battle.party:
+            member = self.gm.party.find(combatant.id)
+            if member is None:
+                continue
+            # Clamp to the member's max so a buggy heal-overflow
+            # never widens the persistent ceiling silently.
+            capped = max(0, min(combatant.hp, member.max_hp))
+            member.current_hp = capped
+        self.gm.party.inventory["potion"] = max(0, int(self.battle.potions))
 
     # ------------------------------------------------------------------
     # TARGETING
