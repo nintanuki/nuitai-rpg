@@ -17,6 +17,14 @@ Nuitai RPG is a long-horizon, layered project. The artistic vision in [docs/VISI
 
 If a question is asked about *why* code was written a certain way, that is a request for an **explanation**, not a request for a code change. Do not modify code unless the user explicitly asks for a change.
 
+## The lore folder is read-only
+
+The articles under [docs/lore/](../docs/lore/) are the authoritative world bible, maintained **outside** this repo (currently on World Anvil and imported via `utils/lore_to_markdown.py`). They are **never** edited from inside this repo — not by humans, not by AI assistants, not by linters or formatters. Read them freely for context; do not write to them.
+
+When the user describes how a **game system** should work (battle math, element interactions, equipment rules, status effects, economy, etc.), that intent goes in `docs/ARCHITECTURE.md` (or a sibling doc under `docs/`) — **never in `docs/lore/`**. The lore folder describes the world; `docs/` describes the game.
+
+If you believe a lore article is contradicted by gameplay, raise it with the user — do not "fix" the article. The resolution is either to change the gameplay or to update the lore externally and re-import.
+
 ## Required actions (after any change)
 
 - Append an entry to [docs/CHANGELOG.md](../docs/CHANGELOG.md) using the format at the top of that file (ISO 8601 timestamp with timezone, file path, line numbers at time of edit, before/after blocks, why, editor name including the AI model used).

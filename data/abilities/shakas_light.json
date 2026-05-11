@@ -1,0 +1,11 @@
+{
+    "id": "shakas_light",
+    "name": "Shaka's Light",
+    "element": "ra",
+    "power": 0,
+    "cost": 0,
+    "kind": "buff",
+    "target": "ally",
+    "status": "aku_immune",
+    "duration": 3
+}

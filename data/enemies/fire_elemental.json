@@ -1,0 +1,7 @@
+{
+    "id": "fire_elemental",
+    "name": "Fire Elemental",
+    "element": "ahi",
+    "stats": {"hp": 24, "attack": 6},
+    "loot": []
+}

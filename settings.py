@@ -1,5 +1,6 @@
 import os
 
+
 class ColorSettings:
     """Class to hold all the color settings for the game."""
     BLACK = (0, 0, 0)
@@ -14,23 +15,24 @@ class ColorSettings:
     BG_COLOR = NERO
     OVERLAY_BACKGROUND = BLACK
 
+    # Per-element accent colors. Used by menus / UI labels to flag the
+    # affinity of an ability or item at a glance. Tuned for readability
+    # on the black command-panel background — Ahi and Wai are *lighter*
+    # than the pure RED/BLUE constants above; Aku ships as a placeholder
+    # orange because the lore color (black) would disappear against the
+    # panel background.
+    ELEMENT_COLORS: dict = {
+        "ahi":  (255, 130, 130),  # light red
+        "wai":  (130, 180, 255),  # light blue
+        "lau":  (130, 220, 130),  # green
+        "mana": (200, 140, 240),  # light purple
+        "ra":   (255, 220, 0),    # yellow (matches the menu cursor for now)
+        "aku":  (255, 150, 50),   # placeholder orange
+    }
+
+
 class BackgroundSettings:
-    """Named scene-background templates and per-scene assignments.
-
-    A *template* describes how a scene's empty backdrop is drawn — usually
-    a solid fill or a vertical gradient. Scenes look up their template
-    through ``SCENE_BACKGROUNDS`` (keyed by the scene class name) and fall
-    back to ``DEFAULT_TEMPLATE`` when unmapped.
-
-    To re-skin a scene, edit ``SCENE_BACKGROUNDS`` only — no scene code
-    has to change. To add a new look across the project, add a new entry
-    to ``TEMPLATES``.
-
-    Template shapes:
-        ("solid", (r, g, b))                       — flat color fill.
-        ("gradient", (r, g, b), (r, g, b))         — vertical gradient
-            interpolated top → bottom.
-    """
+    """Named scene-background templates and per-scene assignments."""
 
     SOLID = "solid"
     GRADIENT = "gradient"
@@ -65,13 +67,9 @@ class ScreenSettings:
     WINDOW_TITLE = "Nuitai RPG"
     TITLE_SCREEN_HEADING = "Nuitai"
 
-class InputSettings:
-    """Controller button and axis mappings used by gameplay and menus.
 
-    Constants are named after the physical button on the controller, not the
-    action it performs. The only exception is JOY_BUTTON_QUIT_COMBO, which is
-    a special multi-button chord rather than a single button.
-    """
+class InputSettings:
+    """Controller button and axis mappings used by gameplay and menus."""
 
     JOY_BUTTON_A = 0
     JOY_BUTTON_B = 1
@@ -89,6 +87,7 @@ class InputSettings:
     JOY_AXIS_R2 = 5
     JOY_TRIGGER_THRESHOLD = 0.5
 
+
 class FontSettings:
     """Font files, sizes, and text-color mappings for UI rendering."""
 
@@ -100,6 +99,7 @@ class FontSettings:
     SIZE_BODY = 16
     SIZE_HEADING = 24
     SIZE_TITLE_SCREEN_HEADING = 72
+
 
 class AudioSettings:
     """Global audio toggles, mixer-level defaults, and the sound/music registry."""
@@ -135,12 +135,12 @@ class AudioSettings:
         ): 1.0,
     }
 
+
 class AssetPaths:
     """Class to hold all the file paths for assets."""
     TV = os.path.join(
         os.path.dirname(__file__), 'assets', 'graphics', 'effects', 'tv.png'
     )
-
     WAVES_SOUND = os.path.join(
         os.path.dirname(__file__), 'assets', 'audio', 'sound', 'waves.ogg'
     )
@@ -150,6 +150,7 @@ class AssetPaths:
     MENU_SELECT_SOUND = os.path.join(
         os.path.dirname(__file__), 'assets', 'audio', 'sound', 'sfx_menu_select3.ogg'
     )
+
 
 class DebugSettings:
     """Settings related to debugging features."""
@@ -164,26 +165,10 @@ class SaveSettings:
 
 
 class BattleSettings:
-    """Gameplay tunables for battles.
+    """Gameplay tunables for battles."""
 
-    Damage multipliers live in ``core/elements.py`` (single source of
-    truth for element math). Everything here is content-feel: how many
-    potions the party starts an encounter with, how much a potion heals,
-    how much defending reduces incoming damage.
-    """
-
-    # Encounter starting inventory. Layer 1 will move this into the
-    # party's shared inventory; for the Layer-0 test fight a flat pool
-    # on the Battle object is enough.
     STARTING_POTIONS = 5
-
-    # Flat heal applied to one party member per potion used. Calibrated
-    # against Combatant HP (Kailo 30, Hina 25, Tawiri 22) so a potion
-    # meaningfully restores roughly half a bar.
     POTION_HEAL_AMOUNT = 15
-
-    # Integer divisor applied to incoming damage when the target spent
-    # its last turn defending. Tweak here to soften / sharpen defend.
     DEFEND_DAMAGE_DIVISOR = 2
 
 
@@ -195,16 +180,15 @@ class UISettings:
     TEXT_BOX_BORDER_THICKNESS = 3
 
     # Width of the command panel on the left half of the bottom HUD
-    # during a party member's turn. The remaining horizontal space
-    # hosts the dialogue prompt to the right of the divider.
-    # Sized so the divider clears the widest line in the party roster
-    # ("TAWIRI 22/22") with a small margin.
+    # during a party member's turn. Sized so the divider clears the
+    # widest line in the party roster ("TAWIRI 22/22") with a small
+    # margin.
     COMMAND_PANEL_WIDTH = 200
 
-    # Per-row gap (in pixels) for the battle command menu. Tighter than
-    # the default menu spacing so all four commands fit in the bottom
-    # HUD without the panel having to grow.
-    COMMAND_MENU_ITEM_SPACING = 4
+    # Explicit pixel distance between rows in the battle command menu.
+    # Sized for SIZE_BODY labels; SIZE_SMALL labels (auto-shrink, when
+    # ability names overflow) sit a little airy in the same rows.
+    COMMAND_MENU_ROW_HEIGHT = 28
 
     TYPEWRITER_CHARS_PER_SECOND = 60
 

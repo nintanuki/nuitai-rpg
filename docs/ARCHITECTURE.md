@@ -109,7 +109,31 @@ Aku  → corrupts   → Mana
 Mana → transcends → Ra
 ```
 
-`damage_multiplier(attacker, defender)` returns `ADVANTAGE_MULTIPLIER`, `DISADVANTAGE_MULTIPLIER`, or `NEUTRAL_MULTIPLIER`. Every battle damage calculation, status-effect interaction, and element-flavored content reads from this module. It is **not duplicated** anywhere — JSON content packs reference element names by string and `data_loader` resolves them.
+`damage_multiplier(attacker, defender)` returns:
+
+- `ADVANTAGE_MULTIPLIER` (2.0) — attacker beats defender per the table above.
+- `DISADVANTAGE_MULTIPLIER` (0.5) — defender beats attacker, **or** attacker and defender share the same element (a target resists its own element; "the Shade does not bleed shadow").
+- `NEUTRAL_MULTIPLIER` (1.0) — cross-triangle pairings.
+
+Every battle damage calculation reads from this module. It is **not duplicated** anywhere — JSON content packs reference element names by string and `data_loader` resolves them.
+
+### What carries an element, and what does not
+
+- **Party basic attacks**: non-elemental. The element table is bypassed entirely (multiplier always 1.0). A character with the Ra element does not deal Ra damage by swinging their wand. Layer 1+ will introduce an augment system (only available to characters with Ahi or Mana) that imbues a basic attack with the augmentor's element; until then the basic attack is the player's neutral fallback.
+- **Abilities**: every ability JSON carries an `element` and a `kind`. Supported kinds: `"damage"` (runs through the element table), `"heal"` (ignores the table), `"buff"` (applies a per-combatant status; today the only buff is Shaka's Light's Aku-immunity counter). Future kinds will include `"status"` for debuffs.
+- **Enemy basic attacks**: keep the enemy's element for now. Layer 1+ will split enemy actions into *physical* (non-elemental) and *special* (elemental) attacks, the same way party characters work, and the inherent-element fallback will retire.
+- **Aku-immunity status**: a per-`Combatant` turn counter (`aku_immune_turns`) granted by Shaka's Light. While positive, any incoming Aku-element strike is fully nullified — the strike still emits a `DamageEvent` with `amount=0` and `multiplier=0.0` so the view can narrate "It had no effect on X!" rather than silently swallowing the action. The counter ticks down at the top of the holder's own turn; reaching zero emits a closing `StatusAppliedEvent(applied=False)` so the view can announce the fade.
+- **Same-element matchups**: neutral (1.0×). Per-combatant resistances to a specific element (e.g. "this Aku creature is immune to Aku status effects") will be authored case-by-case on enemy JSONs, not imposed as a global rule.
+
+### Effectiveness narration
+
+`ui/battle_view.py` consumes `DamageEvent.multiplier` and appends one Pokemon-style follow-up line:
+
+- `multiplier > 1.0` → "It's super effective!"
+- `multiplier < 1.0` → "It's not very effective..."
+- `multiplier == 1.0` → no extra line. Non-elemental hits land here.
+
+This is intentionally generic placeholder text; the per-character, per-element flavor pass happens later in the writing track.
 
 ## 9. Events — typed records
 

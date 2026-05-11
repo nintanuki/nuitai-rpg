@@ -33,23 +33,35 @@ class TurnStartEvent:
 
 @dataclass(frozen=True)
 class AttackEvent:
-    """Emitted when a combatant declares an attack against a target."""
+    """Emitted when a combatant declares an attack against a target.
+
+    ``element`` is ``None`` for non-elemental swings — party members'
+    basic attacks always sit here. Abilities and (for now) enemy basic
+    attacks carry the element they were authored with.
+    """
 
     attacker_id: str
     attacker_name: str
     target_id: str
     target_name: str
-    element: Element
+    element: Element | None
 
 
 @dataclass(frozen=True)
 class DamageEvent:
-    """Emitted after damage is computed and applied."""
+    """Emitted after damage is computed and applied.
+
+    ``element`` is ``None`` for non-elemental damage. ``multiplier`` is
+    the element-matchup scalar applied (1.0 for non-elemental or
+    cross-triangle) — views key the "super effective" / "not very
+    effective" narration off of this number rather than recomputing
+    matchups themselves.
+    """
 
     target_id: str
     target_name: str
     amount: int
-    element: Element
+    element: Element | None
     multiplier: float  # 2.0 / 1.0 / 0.5 — lets views narrate effectiveness.
 
 

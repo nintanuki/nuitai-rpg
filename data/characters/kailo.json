@@ -3,5 +3,5 @@
     "name": "Kailo",
     "elements": ["ahi", "wai"],
     "stats": {"hp": 30, "attack": 8},
-    "learnset": ["fire_punch"]
+    "learnset": ["fire_punch", "wave_fist"]
 }

@@ -852,3 +852,152 @@ def _music_volume_for(self, track_path: str) -> float: ...
 **After:** Choosing Attack, a damage / heal ability, or Potion enters a target-selection state. The candidate pool is the living enemies for damaging commands and the living party for Heal / Potion. A blinking yellow `>` cursor appears next to the highlighted target on the roster; up / down cycle the cursor; confirm submits with `target_id`; cancel returns to the menu the player came from (ability submenu for abilities, top-level command menu otherwise). Defend skips targeting because it acts on the defender themselves. The command panel renders with `font_size=SIZE_SMALL` and the new tight `COMMAND_MENU_ITEM_SPACING`. Roster drawing was extracted into helper methods so the same loop handles both the active-actor yellow highlight and the targeting cursor.
 **Why:** Implements Frankie's "you should be able to select which enemy / which ally" request and removes the placeholder hard-codes from the ability JSON path.
 **Editor:** Frankie (Claude Opus 4.7)
+
+## 2026-05-10T20:30-04:00 — Element rules: non-elemental basic attacks, same-element resistance, Pokemon dialogue
+
+**File:** core/elements.py
+**Lines (at time of edit):** `damage_multiplier` and module docstring
+**Before:** Same-element matchups returned `NEUTRAL_MULTIPLIER` (1.0).
+**After:** Same-element matchups now return `DISADVANTAGE_MULTIPLIER` (0.5) — a target resists its own element ("a Shade does not bleed shadow"). Docstring updated to describe the new rule and to point at `docs/ARCHITECTURE.md` for which strikes carry an element at all.
+**Why:** Frankie's design clarification — Tawiri's Aku Curse on the Aku-aligned Shade should be a *bad* matchup, not a wash.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/events.py
+**Lines (at time of edit):** `AttackEvent.element` and `DamageEvent.element`
+**Before:** Both event fields were typed `Element` (required).
+**After:** Both fields are `Element | None`. `None` means a non-elemental swing (a party basic attack). Docstrings updated to spell out the new semantics so views know `None` is meaningful, not missing.
+**Why:** Encodes the "basic attacks carry no element" rule at the event boundary so views and future renderers see it directly.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** systems/battle.py
+**Lines (at time of edit):** `submit_attack`, `_resolve_attack`, import block
+**Before:** `submit_attack` passed `actor.element` into `_resolve_attack`; the helper unconditionally ran the element table. Effect: Hina's plain wand swing dealt 2× Ra-vs-Aku damage to the Shade.
+**After:** `submit_attack` passes `element=None`; `_resolve_attack` accepts `Element | None` and applies `NEUTRAL_MULTIPLIER` directly when no element is present. Enemy basic attacks (in `start_turn`) still pass `actor.element` — they keep their element until the upcoming physical/special split lands. `NEUTRAL_MULTIPLIER` added to the import list. Module docstring's intent (the "what does and does not carry an element" rules) cross-references `docs/ARCHITECTURE.md`.
+**Why:** Implements the design rule "regular attacks have no elemental affinity." Hina's wand should hit a Shade for normal damage, not super-effective Ra damage.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** ui/battle_view.py
+**Lines (at time of edit):** `DamageEvent` branch of `consume`
+**Before:** Phrased effectiveness inline with the damage line ("A telling blow!" / "It barely lands.") and only as a tag suffix.
+**After:** Damage line stands alone; effectiveness is a **separate** follow-up line — "It's super effective!" for multiplier > 1.0, "It's not very effective..." for multiplier < 1.0. Non-elemental hits (multiplier == 1.0) skip the tag entirely. Pokemon-style placeholder text by Frankie's choice; a writing pass will replace it with character / element flavor later.
+**Why:** Frankie asked for Pokemon's effectiveness dialogue as a placeholder so the matchup math is *felt* by the player.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** .github/copilot-instructions.md
+**Lines (at time of edit):** new "lore folder is read-only" section after the explanation/change-request rule
+**After:** Documents that articles under `docs/lore/` are the authoritative world bible, maintained outside the repo, and never edited from inside the repo by anyone — human, AI, linter. Game-system design intent (battle math, element rules, equipment, etc.) goes in `docs/ARCHITECTURE.md`, not in lore. Lore/gameplay contradictions are raised with the user, not silently fixed.
+**Why:** Frankie's rule — separates the world bible (lore) from gameplay design docs, and makes the boundary unambiguous for future sessions.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** docs/ARCHITECTURE.md
+**Lines (at time of edit):** §8 "Element system"
+**Before:** Described the strength/weakness table and the multipliers, but did not spell out *what kinds of strike* run through the table.
+**After:** Adds three new subsections: (1) the updated multiplier rules including same-element resistance; (2) "What carries an element, and what does not" — party basic attacks are non-elemental, abilities use their own element, enemy basic attacks keep the enemy's element until the physical/special split lands, and Aku's role is debuffs (Curse is a damaging placeholder until status effects ship); (3) "Effectiveness narration" — the Pokemon-style placeholder dialogue and the `multiplier` field that drives it.
+**Why:** With the lore folder closed for editing, ARCHITECTURE.md is now the home for game-system design intent. Captures the rules Frankie clarified about element matchups.
+**Editor:** Frankie (Claude Opus 4.7)
+
+## 2026-05-10T21:15-04:00 — Same-element neutral, Item submenu, expanded roster, Shaka's Light
+
+**File:** core/elements.py
+**Lines (at time of edit):** `damage_multiplier` + module docstring
+**Before:** Same-element matchups returned `DISADVANTAGE_MULTIPLIER` (the short-lived "Shade does not bleed shadow" rule).
+**After:** Same-element matchups return `NEUTRAL_MULTIPLIER` again. The docstring now notes that per-combatant resistances (e.g. an Aku enemy immune to Aku status effects) will be authored case-by-case on enemy content, not imposed as a global rule.
+**Why:** Frankie reverted the earlier design decision — Aku vs Aku should be neutral, and resistances should be opt-in per enemy.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** systems/battle.py
+**Lines (at time of edit):** `Combatant.__init__`, `start_turn`, `submit_ability`, `_resolve_attack`, module docstring
+**Before:** Combatant only carried `is_defending`; abilities supported `damage` / `heal`; `_resolve_attack` always ran the element table when an element was given.
+**After:** Combatant carries `aku_immune_turns: int = 0`. `start_turn` decrements that counter at the top of the holder's own turn and emits `StatusAppliedEvent("aku immune", applied=False)` when it reaches zero. `submit_ability` recognises a new `kind="buff"` (today just `status="aku_immune"` with a `duration`) and sets `aku_immune_turns` on the target. `_resolve_attack` short-circuits when the incoming element is Aku and the target's counter is positive — emits `DamageEvent(amount=0, multiplier=0.0)` instead of applying damage. Module docstring documents the new Aku-immunity rule.
+**Why:** Implements Hina's Shaka's Light ability — three turns of Aku immunity for any party member — without adding a generic status registry yet.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** ui/battle_view.py
+**Lines (at time of edit):** `DamageEvent`, `PotionUsedEvent`, `StatusAppliedEvent` branches of `consume`
+**Before:** Potion narration always said "X drinks a potion" even when the HP was applied to a different ally. StatusAppliedEvent narration used "is afflicted by" / "shakes off" regardless of whether the status was a buff or debuff. Multiplier == 0 hit the standard damage-line path.
+**After:** PotionUsedEvent now reads sender vs target — same id ⇒ "X drinks a potion.", different ids ⇒ "X gives Y a potion." StatusAppliedEvent has a friendly Shaka's-Light path ("Hina is wrapped in Shaka's Light." / "Shaka's Light fades from Hina."); other statuses keep the older afflict / shake-off wording. DamageEvent with `multiplier == 0.0` is treated as the immunity sentinel and emits "It had no effect on X!" instead of the damage line.
+**Why:** Fix the "Hina drank a potion, Kailo recovered HP" mismatch Frankie spotted, and give the new Shaka's Light buff appropriate narration.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** ui/menu.py
+**Lines (at time of edit):** `Menu.render`
+**Before:** Row spacing was driven entirely by `font.get_linesize() + item_spacing`. With the Pixeled font at SIZE_SMALL the natural line height overflowed the bottom HUD and the fourth row fell off the panel.
+**After:** Adds an optional `row_height` parameter that overrides the font-derived line height entirely. Existing callers pass nothing and see no behaviour change; the battle command panel passes `row_height=UISettings.COMMAND_MENU_ROW_HEIGHT` so all four commands fit.
+**Why:** Squeezes the command-menu rows the way Frankie's screenshot called for — top padding intact, inter-row gaps reduced.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** settings.py
+**Lines (at time of edit):** UISettings — `COMMAND_MENU_ITEM_SPACING` removed, `COMMAND_MENU_ROW_HEIGHT` added
+**Before:** `COMMAND_MENU_ITEM_SPACING = 4` (additive to the font's natural line height).
+**After:** `COMMAND_MENU_ROW_HEIGHT = 22` (explicit, overrides the font's metric). Comment captures the trade-off and how to tune.
+**Why:** Spacing-additive tuning couldn't shave enough off the Pixeled font's tall line height; an absolute row height does.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/battle_scene.py
+**Lines (at time of edit):** Whole-file rewrite around Item submenu, learnset hydration, and random encounters
+**Before:** Fourth command row was "Potion x{N}" and clicked straight into potion targeting. The enemy was always Shade. Party members loaded from old saves (no learnset on `PartyMember`) arrived in battle with empty learnsets, permanently greying out the Ability row.
+**After:** Fourth command row is "Item"; clicking it opens an Item submenu listing the party's usable items (today: `Potion x{N}` only — when more items land, the submenu widens). Item row is disabled in the top-level menu when no items are usable. Cancel from the Item submenu falls back to the command menu; cancel from targeting reopens the menu the targeting came from (Ability submenu, Item submenu, or top-level). `_build_party_combatants` hydrates an empty `learnset` from character content data so older saves don't lose their abilities. `_build_enemies` now picks one opponent at random from `_DEMO_ENEMY_IDS` (Shade, Manogata, Fire Elemental, Pohaku, Zealot, Palm Dryad). Render path passes `row_height=COMMAND_MENU_ROW_HEIGHT` into Menu.render so the four rows fit in the bottom HUD.
+**Why:** Implements Frankie's "Item submenu", "random encounters", and "ABILITY should not be greyed out on old saves" requests in one pass.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** data/abilities/wave_fist.json (new file)
+**After:** Wai-element damage ability for Kailo (kind=damage, target=enemy, power=0 → uses actor.attack).
+**Why:** Pairs Wave Fist with Fire Punch so Kailo has both of his elements covered (Ahi + Wai).
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** data/abilities/spirit_blast.json (new file)
+**After:** Mana-element damage ability for Tawiri (kind=damage, target=enemy, power=0).
+**Why:** Gives Tawiri a non-Curse offensive option keyed to her Mana element. Spirit Blast vs Zealot is 2×; vs Shade it's 0.5×.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** data/abilities/shakas_light.json (new file)
+**After:** Ra-element buff ability for Hina (kind=buff, status=aku_immune, duration=3, target=ally).
+**Why:** First proper buff in the game. Makes the chosen ally untouchable by Aku attacks for three turns.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** data/characters/kailo.json / hina.json / tawiri.json
+**Before:** Single-ability learnsets (`fire_punch`, `heal`, `curse`).
+**After:** Two-ability learnsets — Kailo `[fire_punch, wave_fist]`, Hina `[heal, shakas_light]`, Tawiri `[curse, spirit_blast]`.
+**Why:** Lights up the second slot for each character in the Ability submenu.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** data/enemies/manogata.json / fire_elemental.json / pohaku.json / zealot.json / palm_dryad.json (new files)
+**After:** Five new enemy entries, all sharing the Shade's stats (HP 24, attack 6) and differing only in element: Manogata (Wai), Fire Elemental (Ahi), Pohaku (Mana), Zealot (Ra), Palm Dryad (Lau).
+**Why:** Gives every element a target dummy so Frankie can feel each matchup against the new abilities.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** docs/ARCHITECTURE.md
+**Lines (at time of edit):** §8 "What carries an element, and what does not"
+**Before:** Subsection described damage / heal abilities and the future status-effect intent.
+**After:** Adds the `kind="buff"` row, the Aku-immunity status (counter on Combatant, tick on own-turn, multiplier-0 nullification), and the revised same-element rule (neutral, with per-enemy resistances opt-in).
+**Why:** Keeps the architecture doc honest about what the battle system actually does now that buffs and immunity exist.
+**Editor:** Frankie (Claude Opus 4.7)
+
+## 2026-05-10T22:30-04:00 — Bigger menu text, auto-shrink submenus, element-colored ability rows
+
+**File:** settings.py
+**Lines (at time of edit):** `ColorSettings` (new `ELEMENT_COLORS` dict), `UISettings.COMMAND_MENU_ROW_HEIGHT` (22 → 28)
+**Before:** No central element-color palette; command-menu row height was 22 (sized for SIZE_SMALL).
+**After:** `ColorSettings.ELEMENT_COLORS` maps each element id to an RGB tuple: Ahi light red (255, 130, 130), Wai light blue (130, 180, 255), Lau green (130, 220, 130), Mana light purple (200, 140, 240), Ra yellow (255, 220, 0), Aku placeholder orange (255, 150, 50). Aku is orange because the lore color (black) would disappear on the panel; the orange is documented as temporary. `COMMAND_MENU_ROW_HEIGHT = 28` sizes for SIZE_BODY labels; SIZE_SMALL fallback labels still fit (a little airy).
+**Why:** Gives the UI a central place to look up element accents and a one-knob tweak for the row spacing the new larger font needs.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** ui/menu.py
+**Lines (at time of edit):** `MenuItem` dataclass, `Menu.render`
+**Before:** Rows always rendered white (or gray if disabled); no per-row color.
+**After:** `MenuItem` gains an optional `color: tuple[int, int, int] | None` field. `Menu.render` honours it for enabled rows; disabled rows still force gray so "you can't pick this" stays unambiguous. Existing callers pass nothing and see no behaviour change.
+**Why:** Lets the battle scene tint ability rows by their element without baking the palette into the Menu widget.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** core/scenes/battle_scene.py
+**Lines (at time of edit):** `_on_open_abilities`, `_render_command_panel`, new `_fit_font_size` helper
+**Before:** Ability submenu rows had no color and the command panel rendered at a fixed SIZE_SMALL.
+**After:** `_on_open_abilities` reads each ability's `element` and looks the color up in `ColorSettings.ELEMENT_COLORS`, passing it into the row's `MenuItem(color=...)`. `_render_command_panel` calls a new `_fit_font_size(menu, max_width)` helper that walks the font ladder (SIZE_BODY → SIZE_SMALL) and returns the largest size whose widest label still fits the panel's column. The whole menu drops together, so all rows in a submenu share one size and stay aligned with each other.
+**Why:** Implements Frankie's "make the text a little bigger" and "if any ability name is too wide, lock the whole submenu to a smaller size" requests in one place.
+**Editor:** Frankie (Claude Opus 4.7)
+
+**File:** data/abilities/heal.json
+**Before:** `"element": "ra"`
+**After:** `"element": "lau"`
+**Why:** Hina's Heal is a Lau (nature) ability per the design — the wrong element id was a leftover from earlier scaffolding. Affects only the menu tint today; will matter later if Heal ever runs through the damage table (e.g. as a Mana / Lau augment-borne move).
+**Editor:** Frankie (Claude Opus 4.7)

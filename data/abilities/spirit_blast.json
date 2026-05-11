@@ -1,0 +1,10 @@
+{
+    "id": "spirit_blast",
+    "name": "Spirit Blast",
+    "element": "mana",
+    "power": 0,
+    "cost": 0,
+    "kind": "damage",
+    "target": "enemy",
+    "status": null
+}

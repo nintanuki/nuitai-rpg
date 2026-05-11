@@ -1,0 +1,7 @@
+{
+    "id": "manogata",
+    "name": "Manogata",
+    "element": "wai",
+    "stats": {"hp": 24, "attack": 6},
+    "loot": []
+}

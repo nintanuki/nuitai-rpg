@@ -23,13 +23,20 @@ sits underneath.
 Defending halves incoming damage (see ``BattleSettings``) until the
 defender's *next* turn comes around; the flag clears at the top of
 that turn so the buff is exactly one round long.
+
+Aku-immunity (granted by abilities like Shaka's Light) is a per-
+combatant turn counter that drops by one at the top of the holder's
+own turn and is consumed against any incoming Aku-element strike.
+While active, Aku damage on the holder is fully nullified — the strike
+still emits a DamageEvent so the view can narrate the no-effect line,
+but the multiplier is zero and HP is unchanged.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from core.elements import Element, damage_multiplier
+from core.elements import Element, NEUTRAL_MULTIPLIER, damage_multiplier
 from core.events import (
     AbilityUsedEvent,
     AttackEvent,
@@ -39,6 +46,7 @@ from core.events import (
     DefendEvent,
     HealEvent,
     PotionUsedEvent,
+    StatusAppliedEvent,
     TurnStartEvent,
 )
 from settings import BattleSettings
@@ -82,6 +90,11 @@ class Combatant:
         # combatant's next ``start_turn``. While True, incoming damage
         # is divided by ``BattleSettings.DEFEND_DAMAGE_DIVISOR``.
         self.is_defending = False
+        # Remaining turns of Aku immunity (granted by Shaka's Light).
+        # Decrements at the top of this combatant's own turn; an
+        # incoming Aku-element strike is fully nullified while the
+        # counter is positive.
+        self.aku_immune_turns = 0
 
     @property
     def alive(self) -> bool:
@@ -99,19 +112,7 @@ class Battle:
         abilities: dict[str, dict[str, Any]] | None = None,
         potions: int | None = None,
     ) -> None:
-        """Construct a battle from two combatant rosters.
-
-        Args:
-            party_combatants: The player's side.
-            enemy_combatants: The opposing side.
-            abilities: Ability data keyed by id, as produced by
-                ``DataLoader.load("abilities")``. Each entry is a dict
-                with at least ``name``, ``element``, ``kind``
-                (``"damage"`` or ``"heal"``), and ``power``; ``target``
-                is optional and currently honoured for healing only.
-            potions: Starting potion count for the party's shared pool.
-                Defaults to ``BattleSettings.STARTING_POTIONS``.
-        """
+        """Construct a battle from two combatant rosters."""
         self.party = party_combatants
         self.enemies = enemy_combatants
         self._abilities = dict(abilities or {})
@@ -122,14 +123,7 @@ class Battle:
         self._turn_index = 0
         self._ended = False
         self._outcome: str | None = None
-        # The actor whose turn is currently active. Set by
-        # ``start_turn`` and replaced on the next ``start_turn`` rather
-        # than cleared, so views can keep highlighting the actor while
-        # their resolution narration is still draining.
         self._current_actor: Combatant | None = None
-        # True between a party member's ``TurnStartEvent`` and the
-        # matching ``submit_*`` call. While True, ``start_turn`` is a
-        # no-op so the scene can wait on player input.
         self._awaiting_command = False
 
     # ------------------------------------------------------------------
@@ -138,31 +132,20 @@ class Battle:
 
     @property
     def is_over(self) -> bool:
-        """Return True once the battle has emitted its end event."""
         return self._ended
 
     @property
     def outcome(self) -> str | None:
-        """Return ``"victory"``, ``"defeat"``, or None until the battle ends."""
         return self._outcome
 
     @property
     def current_actor(self) -> Combatant | None:
-        """Return the combatant whose turn is active, if any."""
         return self._current_actor
 
     def is_awaiting_command(self) -> bool:
-        """Return True while a party member's turn is waiting on input."""
         return self._awaiting_command
 
     def abilities_for(self, combatant: Combatant) -> list[dict[str, Any]]:
-        """Return ability dicts available to ``combatant``.
-
-        Looks up each id in the combatant's learnset against the
-        ability content pack passed at construction. Missing ability
-        ids are silently skipped so a content typo never crashes the
-        scene mid-fight.
-        """
         out: list[dict[str, Any]] = []
         for ability_id in combatant.learnset:
             entry = self._abilities.get(ability_id)
@@ -171,35 +154,29 @@ class Battle:
         return out
 
     def start_turn(self) -> list[Any]:
-        """Advance to the next living combatant's turn.
-
-        Returns:
-            The events produced by this turn. For an enemy actor this
-            includes the full resolution (``TurnStartEvent``,
-            ``AttackEvent``, ``DamageEvent``, optional
-            ``CombatantDefeatedEvent``, and a terminal
-            ``BattleEndedEvent`` if the battle just ended). For a
-            party actor this is just ``TurnStartEvent`` and the battle
-            is parked in awaiting-command mode until a ``submit_*``
-            call resolves it.
-        """
+        """Advance to the next living combatant's turn."""
         if self._ended or self._awaiting_command:
             return []
         actor = self._next_actor()
         if actor is None:
             return self._end()
         self._current_actor = actor
-        # Defend lasts exactly one round; clear it at the top of the
-        # defender's next turn so the buff window matches a JRPG's
-        # standard expectation.
         actor.is_defending = False
         events: list[Any] = [TurnStartEvent(actor.id, actor.name)]
+        # Tick down Aku immunity at the start of the holder's own
+        # turn; emit a "wears off" StatusAppliedEvent when it drops
+        # to zero so the view can narrate the fade.
+        if actor.aku_immune_turns > 0:
+            actor.aku_immune_turns -= 1
+            if actor.aku_immune_turns == 0:
+                events.append(
+                    StatusAppliedEvent(actor.id, actor.name, "aku immune", False)
+                )
         if actor.is_party:
             self._awaiting_command = True
             return events
-        # Enemy auto-resolution: Layer 0's enemies pick the first
-        # living party member and swing. Layer 1's bestiary will read
-        # action tables from JSON; the seam is right here.
+        # Enemy auto-resolution. Enemy basic attacks keep their
+        # element until the upcoming physical/special split lands.
         target = self._pick_target(actor)
         if target is None:
             events.extend(self._end())
@@ -211,19 +188,19 @@ class Battle:
     def submit_attack(self, target_id: str | None = None) -> list[Any]:
         """Resolve the awaiting party member's basic attack.
 
-        Args:
-            target_id: Optional enemy id; defaults to the first living
-                enemy.
+        Basic attacks have no elemental affinity — the element table is
+        bypassed and the swing always lands at NEUTRAL_MULTIPLIER.
+        Layer 1+ will introduce augments (Ahi / Mana only) that imbue
+        a basic attack with an element.
         """
         actor = self._require_player_actor()
         target = self._find_enemy(target_id) or self._pick_target(actor)
         if target is None:
             return self._finish_player_turn([])
-        events = self._resolve_attack(actor, target, actor.element, actor.attack)
+        events = self._resolve_attack(actor, target, None, actor.attack)
         return self._finish_player_turn(events)
 
     def submit_defend(self) -> list[Any]:
-        """Set the awaiting actor's defending flag and end their turn."""
         actor = self._require_player_actor()
         actor.is_defending = True
         return self._finish_player_turn([DefendEvent(actor.id, actor.name)])
@@ -233,14 +210,6 @@ class Battle:
         ability_id: str,
         target_id: str | None = None,
     ) -> list[Any]:
-        """Resolve the awaiting actor's chosen ability.
-
-        Args:
-            ability_id: The ability's content id.
-            target_id: Optional override for the heal target or
-                damage target; falls back to the ability's ``target``
-                field, then to a sane default.
-        """
         actor = self._require_player_actor()
         ability = self._abilities.get(ability_id) or {}
         name = ability.get("name", ability_id)
@@ -256,7 +225,16 @@ class Battle:
             amount = int(ability.get("power", 0))
             healed = self._restore_hp(target, amount)
             events.append(HealEvent(target.id, target.name, healed))
-        else:
+        elif kind == "buff":
+            target = self._find_party_member(target_id) or actor
+            status = ability.get("status")
+            duration = int(ability.get("duration", 0))
+            if status == "aku_immune":
+                target.aku_immune_turns = duration
+                events.append(
+                    StatusAppliedEvent(target.id, target.name, "aku immune", True)
+                )
+        else:  # damage (default)
             target = self._find_enemy(target_id) or self._pick_target(actor)
             if target is not None:
                 events.extend(
@@ -265,15 +243,8 @@ class Battle:
         return self._finish_player_turn(events)
 
     def submit_potion(self, target_id: str | None = None) -> list[Any]:
-        """Spend one potion from the shared pool to heal a party member.
-
-        With no potions left, this is a no-op that keeps the actor in
-        awaiting-command state so the player can choose a different
-        action.
-        """
         actor = self._require_player_actor()
         if self.potions <= 0:
-            # Don't consume the turn — let the player pick again.
             return []
         self.potions -= 1
         target = self._find_party_member(target_id) or actor
@@ -285,7 +256,6 @@ class Battle:
         return self._finish_player_turn(events)
 
     def flee(self) -> list[Any]:
-        """End the battle immediately with a flee outcome."""
         return self._end("flee")
 
     # ------------------------------------------------------------------
@@ -293,7 +263,6 @@ class Battle:
     # ------------------------------------------------------------------
 
     def _next_actor(self) -> Combatant | None:
-        """Return the next living combatant in turn order, advancing the index."""
         for _ in range(len(self._order)):
             actor = self._order[self._turn_index % len(self._order)]
             self._turn_index += 1
@@ -302,7 +271,6 @@ class Battle:
         return None
 
     def _pick_target(self, actor: Combatant) -> Combatant | None:
-        """Pick the first living opponent for ``actor``."""
         pool = self.enemies if actor.is_party else self.party
         for c in pool:
             if c.alive:
@@ -310,7 +278,6 @@ class Battle:
         return None
 
     def _find_enemy(self, target_id: str | None) -> Combatant | None:
-        """Return the living enemy whose id is ``target_id`` (or None)."""
         if not target_id:
             return None
         for c in self.enemies:
@@ -319,7 +286,6 @@ class Battle:
         return None
 
     def _find_party_member(self, target_id: str | None) -> Combatant | None:
-        """Return the party member whose id is ``target_id`` (or None)."""
         if not target_id:
             return None
         for c in self.party:
@@ -330,7 +296,6 @@ class Battle:
     def _ability_element(
         self, ability: dict[str, Any], actor: Combatant
     ) -> Element:
-        """Resolve an ability's element id; fall back to the actor's element."""
         raw = ability.get("element")
         if not raw:
             return actor.element
@@ -343,14 +308,31 @@ class Battle:
         self,
         actor: Combatant,
         target: Combatant,
-        element: Element,
+        element: Element | None,
         power: int,
     ) -> list[Any]:
-        """Produce events for one strike and apply HP changes."""
+        """Produce events for one strike and apply HP changes.
+
+        ``element`` is ``None`` for non-elemental swings (party basic
+        attacks). The element table is consulted only when an element
+        is present; otherwise the multiplier stays at NEUTRAL_MULTIPLIER.
+
+        If the target carries an active Aku-immunity counter and the
+        incoming element is Aku, the strike is fully nullified — a
+        DamageEvent with amount=0 and multiplier=0 is emitted so the
+        view can narrate the no-effect line.
+        """
         events: list[Any] = [
             AttackEvent(actor.id, actor.name, target.id, target.name, element)
         ]
-        multiplier = damage_multiplier(element, target.element)
+        if element is Element.AKU and target.aku_immune_turns > 0:
+            events.append(DamageEvent(target.id, target.name, 0, element, 0.0))
+            return events
+        multiplier = (
+            damage_multiplier(element, target.element)
+            if element is not None
+            else NEUTRAL_MULTIPLIER
+        )
         raw = max(1, int(power * multiplier))
         amount = (
             max(1, raw // BattleSettings.DEFEND_DAMAGE_DIVISOR)
@@ -366,25 +348,21 @@ class Battle:
         return events
 
     def _restore_hp(self, target: Combatant, amount: int) -> int:
-        """Restore up to ``amount`` HP on ``target``; return the actual amount."""
         before = target.hp
         target.hp = min(target.max_hp, target.hp + max(0, amount))
         return target.hp - before
 
     def _require_player_actor(self) -> Combatant:
-        """Return the current actor or raise if no command is awaited."""
         if not self._awaiting_command or self._current_actor is None:
             raise RuntimeError("No party command is awaiting input")
         return self._current_actor
 
     def _finish_player_turn(self, events: list[Any]) -> list[Any]:
-        """Clear the awaiting flag and append any terminal events."""
         self._awaiting_command = False
         events.extend(self._check_terminal())
         return events
 
     def _check_terminal(self) -> list[Any]:
-        """Return a ``BattleEndedEvent`` list if one side is fully down."""
         if not any(c.alive for c in self.enemies):
             return self._end("victory")
         if not any(c.alive for c in self.party):
@@ -392,7 +370,6 @@ class Battle:
         return []
 
     def _end(self, outcome: str | None = None) -> list[Any]:
-        """Mark the battle ended and return a closing event list."""
         if self._ended:
             return []
         self._ended = True

@@ -9,7 +9,16 @@ triangles, each with a clockwise "beats" relationship:
 If A beats B, an A-aligned attack hits B for ``ADVANTAGE_MULTIPLIER``
 damage and a B-aligned attack hits A for ``DISADVANTAGE_MULTIPLIER``.
 Same-element and cross-triangle pairings are neutral
-(``NEUTRAL_MULTIPLIER``).
+(``NEUTRAL_MULTIPLIER``). Per-combatant resistances or immunities to
+specific elements (e.g. "this Aku enemy is immune to Aku status
+effects") will be authored case-by-case in content data, not imposed
+as a global rule here.
+
+Element math only fires for attacks that *carry* an element. Basic
+attacks from party members are non-elemental and bypass the table
+entirely (see ``docs/ARCHITECTURE.md`` for the rules). Enemy basic
+attacks currently keep their element until the upcoming
+physical/special split lands.
 
 Every other module that needs element math imports from this file.
 Do not duplicate the table.
@@ -77,7 +86,7 @@ def damage_multiplier(attacker: Element, defender: Element) -> float:
     Returns:
         ``ADVANTAGE_MULTIPLIER`` if attacker beats defender,
         ``DISADVANTAGE_MULTIPLIER`` if defender beats attacker, otherwise
-        ``NEUTRAL_MULTIPLIER``.
+        ``NEUTRAL_MULTIPLIER`` (including same-element pairings).
     """
     if beats(attacker, defender):
         return ADVANTAGE_MULTIPLIER

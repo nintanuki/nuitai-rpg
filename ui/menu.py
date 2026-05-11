@@ -29,6 +29,12 @@ class MenuItem:
     label: str
     on_select: Callable[[], None]
     enabled: bool = True
+    # Optional override for the row's label color. When ``None`` the
+    # menu uses ``ColorSettings.WHITE`` (or ``GRAY`` if disabled). When
+    # set, the override applies to enabled rows; disabled rows still
+    # render gray so the "you can't pick this" affordance survives.
+    # Used to tint ability rows by their element.
+    color: tuple[int, int, int] | None = None
 
 
 class Menu:
@@ -39,12 +45,7 @@ class Menu:
         items: list[MenuItem],
         on_cancel: Optional[Callable[[], None]] = None,
     ) -> None:
-        """Build a menu over ``items``.
-
-        Args:
-            items: The menu rows (must contain at least one enabled item).
-            on_cancel: Optional callback fired by ``cancel()``.
-        """
+        """Build a menu over ``items``."""
         self.items = items
         self.on_cancel = on_cancel
         self.cursor = self._first_enabled()
@@ -54,27 +55,12 @@ class Menu:
     # ------------------------------------------------------------------
 
     def move_up(self) -> bool:
-        """Move the cursor to the previous enabled row, wrapping.
-
-        Returns:
-            True when the cursor moved; False otherwise.
-        """
         return self._step(-1)
 
     def move_down(self) -> bool:
-        """Move the cursor to the next enabled row, wrapping.
-
-        Returns:
-            True when the cursor moved; False otherwise.
-        """
         return self._step(1)
 
     def confirm(self) -> bool:
-        """Fire the currently-selected row's callback if it's enabled.
-
-        Returns:
-            True if a callback fired; False otherwise.
-        """
         if 0 <= self.cursor < len(self.items):
             item = self.items[self.cursor]
             if item.enabled:
@@ -83,11 +69,6 @@ class Menu:
         return False
 
     def cancel(self) -> bool:
-        """Fire ``on_cancel`` if one was provided.
-
-        Returns:
-            True if the cancel callback fired; False otherwise.
-        """
         if self.on_cancel is not None:
             self.on_cancel()
             return True
@@ -104,6 +85,7 @@ class Menu:
         centered: bool = False,
         item_spacing: int | None = None,
         font_size: int | None = None,
+        row_height: int | None = None,
     ) -> None:
         """Draw the menu starting at ``position``.
 
@@ -111,25 +93,41 @@ class Menu:
             surface: The target render surface.
             position: Anchor position in pixels.
             centered: If True, each row label is centered on ``position[0]``.
-            item_spacing: Optional per-render row gap in pixels.
+            item_spacing: Optional per-render row gap in pixels (added
+                to the font's natural line size).
             font_size: Optional override for the row font size; defaults
                 to ``FontSettings.SIZE_BODY``. Use ``SIZE_SMALL`` for
                 compact in-HUD menus like the battle command panel.
+            row_height: Optional **explicit** pixel distance between
+                rows. Overrides ``item_spacing`` + font metrics.
         """
         size = FontSettings.SIZE_BODY if font_size is None else font_size
         font = text_renderer.get_font(size)
-        spacing = UISettings.MENU_ITEM_SPACING if item_spacing is None else item_spacing
-        line_height = font.get_linesize() + spacing
+        if row_height is not None:
+            line_height = row_height
+        else:
+            spacing = (
+                UISettings.MENU_ITEM_SPACING if item_spacing is None
+                else item_spacing
+            )
+            line_height = font.get_linesize() + spacing
         x, y = position
 
-        # Cursor blink derived from wall time so the menu doesn't have to
-        # be ticked from update() to animate.
         cursor_visible = (
             int(time.monotonic() * UISettings.MENU_CURSOR_BLINK_HZ * 2) % 2 == 0
         )
 
         for index, item in enumerate(self.items):
-            color = ColorSettings.WHITE if item.enabled else ColorSettings.GRAY
+            # Disabled rows always render gray so the player can tell
+            # they're locked out. Enabled rows use the row's own
+            # ``color`` override (e.g. an ability's element accent)
+            # when set, falling back to plain white.
+            if not item.enabled:
+                color = ColorSettings.GRAY
+            elif item.color is not None:
+                color = item.color
+            else:
+                color = ColorSettings.WHITE
             row_y = y + index * line_height
             text_x = x
             if centered:
@@ -152,14 +150,12 @@ class Menu:
     # ------------------------------------------------------------------
 
     def _first_enabled(self) -> int:
-        """Return the index of the first enabled item, or 0 if none."""
         for index, item in enumerate(self.items):
             if item.enabled:
                 return index
         return 0
 
     def _step(self, direction: int) -> bool:
-        """Move the cursor by ``direction`` rows, skipping disabled items."""
         if not self.items:
             return False
         original_cursor = self.cursor

@@ -3,5 +3,5 @@
     "name": "Hina",
     "elements": ["ra", "lau"],
     "stats": {"hp": 25, "attack": 7},
-    "learnset": ["heal"]
+    "learnset": ["heal", "shakas_light"]
 }

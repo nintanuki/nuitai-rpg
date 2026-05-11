@@ -1,0 +1,10 @@
+{
+    "id": "wave_fist",
+    "name": "Wave Fist",
+    "element": "wai",
+    "power": 0,
+    "cost": 0,
+    "kind": "damage",
+    "target": "enemy",
+    "status": null
+}

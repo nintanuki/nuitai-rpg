@@ -1,7 +1,7 @@
 {
     "id": "heal",
     "name": "Heal",
-    "element": "ra",
+    "element": "lau",
     "power": 15,
     "cost": 0,
     "kind": "heal",
