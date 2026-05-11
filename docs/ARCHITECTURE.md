@@ -222,6 +222,7 @@ docs/
   ROADMAP.md                    The six-layer plan.
   TESTING.md                    Manual smoke checks.
   TODO.md                       Current actionable tasks.
+  TOOLING.md                    Engine + editor + AI choice; pygame vs Godot/GameMaker/RPG Maker tradeoffs.
   VISION.md                     The artistic North Star.
   lore/
     INDEX.md                    TOC for all 114 lore articles.
