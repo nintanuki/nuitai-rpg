@@ -6,7 +6,7 @@
 
 ---
 
-## Layer 0 — Engine spike (current)
+## Layer 0 — Engine spike — **shipped**
 
 ### Code: foundations
 
@@ -52,64 +52,109 @@
 
 ---
 
-## Layer 1 — Vertical-slice text demo (next)
+## Layer 1 — The one-shot (active)
 
-> Listed at this level of detail to help shape Layer 0 — the engine seams must support these. Tasks here are not yet active; do not pick them up until Layer 0 is signed off.
+> The playable cartridge milestone — full design at [docs/design/oneshot.md](design/oneshot.md). Organised by pass; passes ship independently testable. Asset patterns lifted from the predecessor projects are captured at [docs/design/patterns-from-predecessors.md](design/patterns-from-predecessors.md) so neither repo needs to be referenced again.
 
-### Writing (start early — runs in parallel with Layer 0 code)
+### Pass 3 — Asset bones
 
-- [ ] First-pass opening cutscene script (Kailo on Māra Iti; meeting Hina; Tawiri's arrival). ~2 pages.
-- [ ] Dungeon flavor text: per-room descriptions, ambient lines, encounter intros.
-- [ ] Boss intro and victory/defeat lines.
-- [ ] Town NPC dialogue (~5 NPCs in the starting village, including Maika as recruitable-later NPC).
-- [ ] Ending text.
+- [ ] Drop the Dungeon Digger sprite files Frankie's bringing in: player (4 facings), tiles (walkable + walls), doors (open + closed), NPC variants. Skip monsters — random encounters mean no overworld monster sprites needed.
+- [ ] Add `assets/graphics/{player,tiles,npcs}/` directory tree.
+- [ ] Add `AssetPaths` constants for player frames, door images, tile images. Use directory constants for the NPC pool.
+- [ ] Replace `OverworldScene._TILE_COLORS` with a tile-sprite cache; swap the `pygame.draw.rect` call in `_render_cell` for a blit.
+- [ ] Replace `OverworldPlayer.render` rect-fill with a sprite blit keyed off `self.facing`.
+- [ ] Add the rounded-corner panel chrome to the overworld action window and to the existing `TextBox` (4-px corner radius, 2-px white border, black fill).
+- [ ] Rebind `is_menu` from `START` to `Y` in [ui/input_map.py](../ui/input_map.py).
+- [ ] Add a "GAME SAVED." line to the menu's `_save` (papercut from Pass 2's known-rough-edges list).
+- [ ] Smoke: walk around, see real tiles, see the sprite face the way it last moved, see the bordered window chrome, save and see the feedback line.
 
-### Content data
+### Pass 4 — Stats expansion + CTB scheduler
 
-- [ ] `data/characters/kailo.json`, `hina.json`, `tawiri.json`. Stats, starting equipment, starting abilities. Maika as an NPC-only character at this layer.
-- [ ] `data/abilities/*.json`: at least 4 abilities per character covering both elements. At least one boss-relevant interaction (e.g. an Aku ability the boss uses; an Ra ability Hina has that purifies it).
-- [ ] `data/enemies/*.json`: 4–6 enemy types for the demo dungeon plus the boss.
-- [ ] `data/dungeons/demo_dungeon.json`: room layout, encounter tables, treasure, boss room.
-- [ ] `data/dialogue/*.json`: opening cutscene, town NPCs, dungeon flavor, boss, ending.
+- [ ] Add `mp`, `def`, `matk`, `mdef`, `spd` fields across `PartyMember`, `Combatant`, JSON content packs (with backward-compat defaults for old saves).
+- [ ] Add `current_mp` to `PartyMember` alongside `current_hp`.
+- [ ] Replace `Battle._order` rotation with the next-turn-time scheduler (`combatant.next_turn_time` advanced by `action_cost / max(1, SPD)` after each act).
+- [ ] Add `Battle.peek_upcoming(n)` returning the next n actors in scheduled order.
+- [ ] Add the upcoming-turns strip to `BattleScene` rendering (~6–8 entries, each a small portrait or tinted block per the icon system).
+- [ ] Update damage formula to use the new defense / magic stats per [oneshot.md](design/oneshot.md) §6.
+- [ ] Bump party + enemy stats per [oneshot.md](design/oneshot.md) §11.
 
-### Placeholder art
+### Pass 5 — Icons + portraits + UI polish
 
-- [ ] Source free-licensed portrait placeholders for Kailo, Hina, Tawiri (and Maika as NPC). Drop into `assets/graphics/portraits/`. Credit in [README.md](../README.md).
+- [ ] Create `assets/graphics/icons/` and `assets/graphics/portraits/`.
+- [ ] Add `ui/icons.py` with a load-once cache + `draw_icon(surface, id, position)` helper.
+- [ ] Placeholder element icons: render the element's first letter into a 16×16 surface with the element's accent color so the icon contract works on day one (replace with Aseprite art when it lands).
+- [ ] Replace text element labels in `PartyScene` with element icons.
+- [ ] Add portrait blits to `PartyScene` rows (placeholder: a colored 32×32 square with the member's name beside it).
+- [ ] Add item icons to `InventoryScene` rows.
+- [ ] Use icons in the battle command panel ability rows (in addition to or replacing the row color tint).
 
-### Definition-of-done check
+### Pass 6 — Inventory navigation + use-outside-battle
+
+- [ ] `InventoryScene` grows a vertical cursor (uses `Menu` widget shape).
+- [ ] Each item row has a description shown in a side panel when highlighted.
+- [ ] Confirm on `potion` outside battle opens a target submenu listing party members; selecting one consumes the potion and heals the target by `BattleSettings.POTION_HEAL_AMOUNT`.
+- [ ] Confirm on a non-usable item shows its description and nothing else.
+
+### Pass 7 — Dungeon content + interactables
+
+- [ ] Author the village hub cell + 4–6 dungeon cells in the cell representation. Decide whether to keep cells in `core/overworld_cells.py` or migrate to `data/cells/*.json` here (the migration was an open question from Pass 2).
+- [ ] Add `interactables` to cell data; wire dispatch in `OverworldScene.handle_event` for: `npc`, `sign`, `warp`, `save`, `heal`, `shop`, `door`.
+- [ ] Author 3–5 NPC dialogue trees in `data/dialogue/`.
+- [ ] Build `ShopScene` + `data/shops/lehua_general_store.json` content.
+- [ ] Author the boss enemy entry + boss room + ending screen scene.
+- [ ] Add gold drops to enemy JSON + a small chunk to the boss.
+
+### Pass 8 — Battle balance + writing pass
+
+- [ ] Tune enemy stats against actual play. Adjust `EncounterSettings.RATE_PER_STEP` from the testing default (0.20) toward the production target (~0.08) once content is dense enough.
+- [ ] Polish dialogue copy; replace the placeholder NPC names with named villagers.
+- [ ] Smoke playthrough end-to-end; iterate. Any encounter that feels trivial gets a stat bump; any that feels punishing gets a stat trim.
+- [ ] First-pass opening cutscene script (~1–2 pages).
+- [ ] Boss intro / victory / defeat / ending text.
+
+### Pass 9 — Layer-0.5 deferrals folded in
+
+- [ ] Persist the **scene stack** in saves (so Continue resumes the player's exact tile, not just the party). Bump `SAVE_SCHEMA_VERSION` and ship a `migrate()` step.
+- [ ] Promote `Combatant.statuses` (the field reserved at the close of Layer 0) and migrate the existing `aku_immune_turns` field into it; `curse`'s ATK/MATK debuff lives here too.
+
+### Cross-cutting (Layer-1-wide)
+
+- [ ] Each pass appends [docs/CHANGELOG.md](CHANGELOG.md) entries per file.
+- [ ] [docs/ARCHITECTURE.md](ARCHITECTURE.md) gets a current-systems section for each shipped pass.
+- [ ] [docs/TESTING.md](TESTING.md) grows new smoke checks for each shipped pass.
+- [ ] Cross-checks against [docs/design/oneshot.md](design/oneshot.md) — if implementation diverges, update the design doc rather than letting the divergence drift.
+
+### Definition of done
 
 - [ ] A clean playthrough exists from title screen to ending text.
-- [ ] Save / load works from anywhere outside of battle.
-- [ ] Element strength/weakness has a *felt* effect on combat speed.
+- [ ] Save / load works from anywhere outside of battle and restores the player's exact overworld tile (Pass 9).
+- [ ] Element strength/weakness has a *felt* effect on combat.
+- [ ] CTB turn order is visible and feels strategic.
 - [ ] No `print()` calls in any production code path.
+- [ ] Frankie can hand `python main.py` to a friend and they can play the one-shot from start to finish.
 
 ---
 
 ## Layer 0.5 — Scaffolding deferrals
 
-> Identified at the close of Layer 0. None block Layer 1 from starting; each removes friction for weaker contributors and protects against regressions. Promote into the active layer when picked up.
-
-### Engine seams
-
-- [ ] Persist the **scene stack** in saves, not just the party. Each `Scene` already has `to_dict` / `from_dict`; have [core/save.py](../core/save.py) walk `gm.scene_stack` and rebuild it on load. Bump `SAVE_SCHEMA_VERSION` and ship a `migrate()` step.
-- [ ] Reserve a `statuses` field on [`Combatant`](../systems/battle.py) and add a stub `core/status.py` registry so Layer 2's poison/burn/drench/blind/weaken/silence pass does not have to retrofit the data shape.
+> Identified at the close of Layer 0. **The two engine-seam items have been folded into Layer 1's pass plan** (scene-stack persistence is now Pass 9; the Combatant.statuses field is Pass 9 alongside it because Pass 4's `curse` ability needs status infrastructure). The tooling and writing-pipeline items remain ambient — pick them up when convenient.
 
 ### Tooling
 
-- [ ] Add `tests/smoke_test.py` driven by `SDL_VIDEODRIVER=dummy` + `SDL_AUDIODRIVER=dummy`. Boot, advance N frames, push the NEW GAME → FIGHT → SAVE → QUIT TO TITLE → CONTINUE round-trip, assert the saved party reloads. One file, no test framework — runnable as `python tests/smoke_test.py`.
+- [ ] Add `tests/smoke_test.py` driven by `SDL_VIDEODRIVER=dummy` + `SDL_AUDIODRIVER=dummy`. Boot, advance N frames, push the NEW GAME → FIGHT → SAVE → QUIT TO TITLE → CONTINUE round-trip, assert the saved party reloads. One file, no test framework — runnable as `python tests/smoke_test.py`. Picking this up before Pass 4 would let CTB changes be regression-tested cheaply.
 - [x] Delete the stray `.gitignore copy` at the repo root.
 
 ### Writing pipeline
 
-- [ ] Create `docs/writing/` with templates for: cutscene script, NPC dialogue, room flavor, boss intro/victory/defeat, and ending text. One Markdown file per template, each showing the JSON shape it lowers into under `data/dialogue/`.
+- [ ] Create `docs/writing/` with templates for: cutscene script, NPC dialogue, room flavor, boss intro/victory/defeat, and ending text. One Markdown file per template, each showing the JSON shape it lowers into under `data/dialogue/`. Useful before Pass 7 / Pass 8 when the writing volume picks up.
 
 ---
 
-## Layer 3 — Overworld (parallel track, accelerated)
+## Layer 3 — Overworld (parallel track, accelerated) — **shipped**
 
-> The tile-and-sprite overworld is officially a Layer-3 deliverable, but it is being kicked off early so it can advance in parallel with the Layer-1 text demo / battle polish. The point is to build the bones inside the existing scene-stack engine; Layer-3 *content* (real tilesets, real sprites, ship scenes) still waits its turn.
+> Historical record. Both passes shipped during the 2026-05-11 session. The overworld engine is the foundation Layer 1 builds on, and the original Layer 3 has been re-scoped to "the world map and the maelstrom" — see [ROADMAP.md](ROADMAP.md). Items that were still open at session-close have been absorbed into Layer 1 (Pass 3 for sprite art swap; Pass 7 for cells / NPCs / signs / warps; Pass 9 for mid-transition save). Annotated in line below.
 >
-> Full design: [docs/design/overworld.md](design/overworld.md). Read it before picking up any task here.
+> Full design: [docs/design/overworld.md](design/overworld.md). Read it before picking up Layer-1 Pass 3 (which builds on this engine).
 
 ### Pass 1 — scaffolding (no playable demo yet)
 
@@ -126,30 +171,30 @@
 - [x] Update [docs/ARCHITECTURE.md](ARCHITECTURE.md) with current-systems sections for `World`, `OverworldPlayer`, `OverworldScene` once they land.
 - [x] Add overworld smoke checks to [docs/TESTING.md](TESTING.md).
 - [x] Append a [docs/CHANGELOG.md](CHANGELOG.md) entry per file touched.
-- [ ] **Run the Pass-1 manual smoke checks in [TESTING.md](TESTING.md) §22–30 and sign off.** (Pending Frankie's machine — sandbox has no pygame/display.)
+- [x] **Run the Pass-1 manual smoke checks in [TESTING.md](TESTING.md) §22–30 and sign off.** (Verified by Frankie on Windows.)
 
 ### Pass 2 — playable demo
 
-- [ ] Author two or three real cells with placeholder tile art chosen for Nuitai's tropical-island setting (no Dungeon Digger dungeon assets).
-- [ ] Source a placeholder player sprite set (4 facings; static, no walk cycle yet). Credit in README.
-- [ ] Add a static `interactables` dict to cell data and a "tile in front of me" interaction dispatch in `OverworldScene`.
-- [ ] Wire one NPC tile through `DialogueRunner` + `TextBox` (re-use the path `TestWorldScene._talk` already exercises).
-- [ ] Wire one sign tile (push text onto the box).
-- [ ] Wire one warp tile (cross-cell teleport with sprite snap).
+- [ ] Author two or three real cells with placeholder tile art chosen for Nuitai's tropical-island setting. *(Promoted to Layer 1 Pass 7 — village + 4–6 dungeon cells.)*
+- [ ] Source a placeholder player sprite set (4 facings; static, no walk cycle yet). *(Promoted to Layer 1 Pass 3 — Dungeon Digger temp sprites going in.)*
+- [ ] Add a static `interactables` dict to cell data and a "tile in front of me" interaction dispatch in `OverworldScene`. *(Promoted to Layer 1 Pass 7.)*
+- [ ] Wire one NPC tile through `DialogueRunner` + `TextBox`. *(Promoted to Layer 1 Pass 7.)*
+- [ ] Wire one sign tile. *(Promoted to Layer 1 Pass 7.)*
+- [ ] Wire one warp tile. *(Promoted to Layer 1 Pass 7.)*
 - [x] Step-counted random encounter system: rate + min-quiet-steps; push real `BattleScene` on hit; reset counter on battle resolution. (Global rate for now via `EncounterSettings`; per-cell tables are a follow-up once cell data migrates to JSON.)
 - [x] Persist per-member current HP across battles and saves. Added `PartyMember.current_hp`, separated `Combatant.max_hp` from initial `hp`, wrote HP back at `BattleEndedEvent`, taught `Party.from_dict` to default to max when the field is missing for backward-compat.
 - [x] Migrate potions from a battle-local pool to `Party.inventory["potion"]`. New games seed 5; battles read at construction and write the survivor count back at end.
 - [x] Enable the PARTY menu row → new `PartyScene` showing each member's name + HP/max HP + element pair.
 - [x] Enable the INVENTORY menu row → new `InventoryScene` listing inventory rows.
-- [ ] Import `sfx_movement_footstepsloop4_slow.ogg` and `wall_bump_sound_effect.ogg` from Dungeon Digger; register in `AudioSettings.SOUND_EFFECTS`; play on step-complete and bump. (Footstep loop is wrong shape for grid-stepped movement — Pass-2 footstep audio probably wants a discrete tap; revisit when sourcing audio.)
-- [ ] Verify save/load mid-cell-transition and mid-dialogue resume cleanly.
-- [ ] Update CHANGELOG / ARCHITECTURE / TESTING / TODO marks for the remaining `[ ]` items.
+- [ ] Import `sfx_movement_footstepsloop4_slow.ogg` and `wall_bump_sound_effect.ogg` from Dungeon Digger. *(The footstep loop is wrong shape for grid-stepped movement — needs a discrete tap. Layer 1 Pass 3 stretch goal at most; otherwise defer to Layer 2 audio pass.)*
+- [ ] Verify save/load mid-cell-transition and mid-dialogue resume cleanly. *(Promoted to Layer 1 Pass 9 — scene-stack-in-save will fix this naturally.)*
+- [ ] Update CHANGELOG / ARCHITECTURE / TESTING / TODO marks for the remaining `[ ]` items. *(Standing item — every pass.)*
 
-### Open design questions (revisit when needed)
+### Open design questions (carried forward into Layer 1)
 
-- [ ] Decide if/when to migrate cells from `core/overworld_cells.py` module to `data/cells/*.json` via `DataLoader`.
-- [ ] Decide if `TextBox` should grow a `render_empty_frame` option for always-visible message-box chrome.
-- [ ] Decide what keyboard key opens the menu (probably `Tab` or `Enter` — `Enter` collides with confirm).
+- [ ] Decide if/when to migrate cells from `core/overworld_cells.py` module to `data/cells/*.json` via `DataLoader`. *(Pinned for Layer 1 Pass 7 — likely yes given the dungeon's cell count.)*
+- [ ] Decide if `TextBox` should grow a `render_empty_frame` option for always-visible message-box chrome. *(Layer 1 Pass 3 — the action-window panel chrome is going in regardless; if it surrounds an empty box visually it's the same effect.)*
+- [ ] Decide what keyboard key opens the menu. *(Resolved at session close: Tab on keyboard + Y on controller.)*
 
 ---
 

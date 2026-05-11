@@ -39,7 +39,9 @@ Events are routed by type:
 - `JOYHATMOTION` → `_handle_joyhatmotion` (stub; scenes read these via `ui/input_map.py`).
 - `JOYAXISMOTION` → `_handle_joyaxismotion` (stub; scenes read these via `ui/input_map.py`).
 
-After global handling, every event is forwarded to the active scene through `scene_stack.handle_event(event)`. Scenes use [ui/input_map.py](../ui/input_map.py) helpers (`is_confirm`, `is_cancel`, `is_up`, `is_down`, ...) to translate raw events into logical UI actions, so each scene does not reimplement the keyboard + controller routing. Confirm currently maps to keyboard (`Enter`, `Z`, `Space`) plus controller (`A`, `START`) so menu selection parity is preserved across input devices.
+After global handling, every event is forwarded to the active scene through `scene_stack.handle_event(event)`. Scenes use [ui/input_map.py](../ui/input_map.py) helpers — `is_confirm`, `is_cancel`, `is_up`, `is_down`, `is_left`, `is_right`, `is_menu` — to translate raw events into logical UI actions, so each scene does not reimplement the keyboard + controller routing. Confirm currently maps to keyboard (`Enter`, `Z`, `Space`) plus controller (`A`, `START`) so menu selection parity is preserved across input devices. `is_menu` opens the system menu; today it routes `Tab` (keyboard) + `START` (controller) — Layer 1 Pass 3 rebinds the controller side from `START` to `Y` per [docs/design/oneshot.md](design/oneshot.md) §5.
+
+Movement on the overworld is **polled**, not event-driven: `OverworldPlayer.update` calls `input_map.read_held_direction(joysticks)` once per frame, which returns the currently-held cardinal `(dx, dy)` from keyboard state plus every connected joystick's D-pad and left analog stick. Polling for movement avoids reconfiguring `pygame.key.set_repeat` globally (which would bleed key-repeat into menus and the text box). Event-driven helpers (`is_up` etc.) are still used for menu cursor navigation, where one-press-equals-one-move is the right feel.
 
 Joysticks are cached at startup in `setup_controllers()`. Hot-plug requires re-running it. The quit chord is `InputSettings.JOY_BUTTON_QUIT_COMBO`.
 
@@ -70,6 +72,10 @@ Joysticks are cached at startup in `setup_controllers()`. Hot-plug requires re-r
 | `BattleSettings` | Starting potion count, potion heal amount, defend damage divisor. Gameplay-feel knobs for the battle system; element multipliers stay in `core/elements.py`. |
 | `UISettings`     | Text-box geometry, typewriter speed, menu cursor blink, menu spacing/alignment, title-screen layout anchors, command-panel width. |
 | `BackgroundSettings` | Named scene-background templates (solid / vertical gradient) and the `SceneClassName → template` mapping consumed by `utils/backgrounds.py`. |
+| `GridSettings`   | Tile dimensions for the overworld grid (`TILE_SIZE = 32`).                       |
+| `OverworldSettings` | Cell-area layout (rows / cols / pixel dimensions / origin) plus the cell-tile alphabet (`WALL_CHAR`, `WATER_CHAR`, `SAND_CHAR`, `FLOOR_CHAR`). |
+| `EncounterSettings` | Step-counted random-encounter parameters (`RATE_PER_STEP`, `MIN_QUIET_STEPS`).  |
+| `OverworldPlayerSettings` | Tunables for the overworld player sprite (step duration, placeholder color, sprite size, spawn tile). |
 
 **No magic numbers anywhere outside this file.**
 
@@ -217,6 +223,10 @@ Once a battle has run, `Party.inventory["potion"]` is authoritative for every su
 assets/
   font/Pixeled.ttf              Pixel font for retro UI text.
   graphics/effects/tv.png       CRT overlay texture.
+  graphics/                     Layer-1 sprite assets land under here (player/, tiles/,
+                                npcs/, icons/, portraits/) once Pass 3 / Pass 5 ship.
+  audio/sound/                  SFX (waves loop + menu cues today; footsteps + bumps later).
+  audio/music/                  Music tracks (none yet — Layer 4).
 core/
   elements.py                   Element enum + damage table (single source of truth).
   events.py                     Typed event records (battle + dialogue).
@@ -266,12 +276,20 @@ settings.py                     All tunables.
 docs/
   ARCHITECTURE.md               This file.
   CHANGELOG.md                  Append-only history.
+  CONTRIBUTING.md               "I want to add X — what files do I touch?" lookup table.
   LOREDUMP.html                 Original World Anvil export (preserved verbatim).
-  ROADMAP.md                    The six-layer plan.
+  ROADMAP.md                    The six-layer plan (re-framed 2026-05-11; Layer 1 is now the playable cartridge).
   TESTING.md                    Manual smoke checks.
   TODO.md                       Current actionable tasks.
   TOOLING.md                    Engine + editor + AI choice; pygame vs Godot/GameMaker/RPG Maker tradeoffs.
   VISION.md                     The artistic North Star.
+  design/
+    oneshot.md                  The Layer-1 plan: stats / CTB / dungeon / shop / icons / window style.
+    overworld.md                Pass-1 / Pass-2 design for the tile-based overworld.
+    patterns-from-predecessors.md
+                                Code patterns lifted from Dungeon Digger / Adventure (so neither
+                                repo needs to be referenced again — sprite loading, walk animation,
+                                NPC pattern, door pattern, color_with_alpha, tutorial cards, etc).
   lore/
     INDEX.md                    TOC for all 114 lore articles.
     <category>/<slug>.md        One file per article.

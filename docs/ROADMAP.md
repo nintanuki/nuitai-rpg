@@ -6,6 +6,8 @@ This roadmap describes the project as a sequence of **vertical slices**. Every l
 
 For the artistic North Star, see [VISION.md](VISION.md). For the current actionable task list, see [TODO.md](TODO.md).
 
+> **2026-05-11 reframe:** at the close of the Pass-1 / Pass-2 overworld work, the layer plan was significantly compressed. The original five-layer "text → text+portraits → tile-and-sprite → animated → original-art" ramp existed to de-risk the engine, but the engine has now been de-risked: the scene stack, save round-trip, battle simulation, dialogue runner, and tile-based overworld with grid-stepped movement / random encounters / HP-and-inventory persistence are all in the tree and verified. **Layer 1 has absorbed most of the original Layers 2 and 3** and is now framed as "the playable cartridge" — a complete short JRPG that ships as a one-shot. See [docs/design/oneshot.md](design/oneshot.md) for the full Layer-1 plan. Layers 2+ still describe the longer-arc work (more dungeons, more story, original art and music, the maelstrom + ship system, the airship and stone-speech endgame) but their scope contracts because Layer 1 is doing more of the foundational work up front.
+
 ---
 
 ## Layer 0 — Engine spike
@@ -35,91 +37,108 @@ A test scene exists where the player can: sail through a placeholder dialogue tr
 
 ---
 
-## Layer 1 — The vertical-slice text demo
+## Layer 1 — The one-shot (the playable cartridge)
 
-**Goal:** Ship a complete, end-to-end playable demo. ~20–30 minutes of content. All in-window text rendering, no sprites yet, free placeholder portraits for the three party members. **This is the "is the game fun?" milestone.**
+**Goal:** Ship a complete, end-to-end playable JRPG. One dungeon, one boss, three party members, ~30 minutes of content. The tile-based overworld engine carries the exploration; battles stay narrated in the text box. This is the **"is the game fun?"** milestone, and it is also the milestone where the engine stops growing and content starts.
+
+> Full design: [docs/design/oneshot.md](design/oneshot.md). Read it before picking up Layer-1 work.
 
 ### Acceptance criteria
 
 - [ ] **Three playable party members:** Kailo (Ahi + Wai), Hina (Ra + Lau), Tawiri (Mana + Aku). Each has at least 4 abilities representing both of their elements.
-- [ ] An opening cutscene (text + free placeholder portrait) on Māra Iti introducing Kailo, then Hina, then Tawiri.
-- [ ] **One small dungeon** (3–5 rooms) with text-based room descriptions, ~3 random encounters per room, environmental flavor text.
-- [ ] **One boss** with a thematic gimmick that requires understanding the element system to defeat (e.g. uses Aku to corrupt the party's Mana — Hina's Ra purifies it).
-- [ ] **Maika appears** as an NPC in town. Refuses to join. Hints at his order's interest. Not playable yet.
-- [ ] A short ending screen / credits roll.
-- [ ] Save points (or save-anywhere outside of battle) work across the whole demo.
+- [ ] An opening cutscene introducing the party — text-driven, with placeholder portraits visible in the menu.
+- [ ] **One dungeon** (4–6 rooms / cells) with placeholder tile art, walked on the overworld, with random encounters via the step-counted system already shipping in Pass 2.
+- [ ] **One village hub** at the dungeon's mouth — ~3–5 NPCs, one shop, one save point, one heal point. Dialogue trees flat (one screen each, no branching beyond first-time / repeat).
+- [ ] **One boss** with a thematic gimmick that requires understanding the element system to defeat. Pinned down during dungeon design.
+- [ ] **Maika appears** as an NPC. Refuses to join. Hints at his order's interest. Not playable yet.
+- [ ] **A short ending screen** when the boss is defeated.
+- [ ] **Save anywhere outside of battle** (and at save points specifically, with on-screen feedback).
+- [ ] **Heal points** restore HP and MP to full with confirmation feedback.
+- [ ] **The seven-stat schema** (HP / MP / ATK / DEF / MATK / MDEF / SPD) drives party + enemy stats; element strength/weakness still gates damage on top per `core/elements.py`.
+- [ ] **FFX-style CTB** turn order with a visible upcoming-turns strip during battle.
+- [ ] **Each enemy has an ability** in addition to a basic attack — `curse` (Aku debuff), `firebolt`, `wave_fist`, `heal`, `shakas_light`, `spirit_blast`, plus the boss's signature.
+- [ ] **Inventory navigable outside battle**, with item descriptions, with potions usable on a chosen party member.
+- [ ] **Window-frame style** consistent across battle, overworld, and menus — rounded white border, black fill, the same widget for every text panel.
+- [ ] **Y opens the menu, B closes it** on controller; Tab opens it on keyboard.
 - [ ] Element strength/weakness is **felt** in combat — players who pick the right ability deal noticeably more damage and finish fights faster.
 
 ### Asset requirements
 
-- Free portrait placeholders for Kailo, Hina, Tawiri (and optionally Maika as NPC).
-- No sprites required. No music required (silence + the existing audio manager hooks are fine; SFX optional).
+- **Temporary, borrowed from Dungeon Digger:** player sprite (4 facings), walkable / non-walkable tiles, doors, NPC sprites. Replaced by original Aseprite work as the art track catches up.
+- **Original, in this milestone:** none required to ship — placeholder borrowed art is acceptable for the milestone. Original art ships as it lands.
+- **Element + item icons** at 16×16 (placeholder rendered as letters until Aseprite icons land).
+- **Character portraits** at 32×32 (placeholder rendered as colored squares with name labels until art lands).
+- **No music required.** SFX optional; the borrowed Dungeon Digger walk / wall-bump are easy wins when sourced.
 
 ### Writing requirements
 
-- Opening cutscene script (~2 pages).
-- Dungeon flavor text (per room, per encounter, per boss).
-- Town NPC dialogue (handful of NPCs in the starting village).
-- Maika's introduction scene.
+- Opening cutscene script (~1–2 pages).
+- Village NPC dialogue (3–5 NPCs).
+- Shop greeting + flavor text.
+- Save / heal point flavor lines.
+- Dungeon flavor text (per cell on entry, per encounter intro, per boss intro).
+- Boss intro / victory / defeat.
 - Ending text.
 
 ### Definition of done
 
-A friend who has never seen the project can be handed `python main.py`, play through the entire demo without help, and tell you whether it was fun. They can save mid-dungeon, quit, and resume. They never see a console window.
+A friend who has never seen the project can be handed `python main.py`, play through the entire one-shot without help, and tell you whether it was fun. They can save mid-dungeon, quit, and resume. They never see a console window. They feel the element system in combat. The art is rough, but the *game* is whole.
 
 ---
 
-## Layer 2 — Content & polish on the same engine
+## Layer 2 — Bigger world, deeper systems
 
-**Goal:** Demonstrate that the engine can carry a full game's worth of content. Still text-rendered, still placeholder portraits, but **the world is bigger and the systems are deeper**.
+**Goal:** Take the one-shot and grow it into a multi-region story arc. This is where the world stops being one island and starts being the maelstrom-ringed archipelago described in the lore.
 
 ### Acceptance criteria
 
-- [ ] **Town hub** with shops (weapons, armor, items), an inn (rest / save), and ~6 named NPCs with dialogue.
+- [ ] **Second region** (Makua Archipelago or Lanuroa) with its own dungeon and its own town hub. Different enemy mix, different aesthetic.
 - [ ] **Maika joins** the party as the fourth recruit (Lau + Mana).
-- [ ] **Second dungeon** in a different region (Makua Archipelago or Lanuroa). Different enemy mix, different aesthetic in the text descriptions.
-- [ ] **Status ailments** fully implemented: poison, burn, drench, blind, weaken, silence (the Mana counterpart, since silence-as-such doesn't apply when magic is motion — see [VISION.md](VISION.md) for the constraint).
-- [ ] **All 6 elements** appear in at least one party member ability and one enemy attack.
-- [ ] **At least one example of every element-pair affinity** (15 combos) appears in the bestiary or NPC roster, even if briefly.
-- [ ] Equipment system: at least 6 weapons and 6 armor pieces, distributed by element affinity.
-- [ ] Item system: consumables (food, potions, antidotes, escape rope equivalent).
+- [ ] **Status ailments** fully implemented: poison, burn, drench, blind, weaken, silence (the Mana counterpart). The `Combatant.statuses` field promoted from Layer 0.5 deferral.
+- [ ] **All 6 elements** appear in at least one party member ability and one enemy attack at every difficulty tier.
+- [ ] **At least one example of every element-pair affinity** (15 combos) appears in the bestiary.
+- [ ] **Equipment system**: at least 6 weapons and 6 armor pieces, distributed by element affinity.
+- [ ] **Stance / augment system** — per-character ability augments that imbue basic attacks with the augmenter's element (the Layer-1 deliberate "basic attacks are non-elemental" gate gets unlocked here).
+- [ ] **MP replaced by lore-correct caster cost** — stamina, rhythm-game inputs, or cooldowns (decided here based on Layer-1 playtesting).
+- [ ] **Branching dialogue** for at least the major NPCs (story-relevant ones get multiple states).
 
 ### Asset requirements
 
-- Free portrait placeholder for Maika.
-- Optional: a single placeholder battle theme and a single placeholder town theme (free-licensed).
+- Original Aseprite tile sets for the second region.
+- Original portraits for Maika and any new named NPC.
+- Optional: first original music track (one region theme).
 
 ### Definition of done
 
-A 1–2 hour playthrough exists. The player can grind, shop, gear up, learn abilities, and clear two dungeons. The element system is felt to be deep, not gimmicky.
+A 1–2 hour playthrough exists, with the player travelling between two named regions, recruiting Maika, learning the stance / augment system, and clearing both dungeons. The element system is felt to be deep, not gimmicky.
 
 ---
 
-## Layer 3 — The Dragon Quest stage
+## Layer 3 — The world map and the maelstrom
 
-**Goal:** Add **graphics** without abandoning text-narrated combat. This layer is treated as a **legitimate destination**, not a way-station. A player who only ever sees Layer 3 should still be playing a complete game.
+**Goal:** Add the third dimension the lore depends on — sailing. The world goes from "two regions you can hop between" to "an archipelago ringed around a maelstrom, with sailing direction that matters."
+
+> Originally Layer 3 was where the tile-and-sprite engine was supposed to land. That work shipped early in Layer 1; this layer is now about the **maelstrom-as-map** instead.
 
 ### Acceptance criteria
 
-- [ ] A **tile-based world map and dungeon renderer**. Free-licensed tilesets are acceptable; original tiles preferred when ready.
-- [ ] **Sprite-based encounter view**: enemy sprites appear on a battle background; the player's party is represented by an offscreen "first-person" perspective (à la Dragon Quest), or by static portrait stripes at the bottom of the screen — author's choice.
-- [ ] **Static character portraits** during dialogue, with simple facial expression variants (neutral, surprised, angry, etc.).
-- [ ] **Combat narration stays in the text box.** "THE BOAR ATTACKS! KAILO TAKES 6 DAMAGE!" is the canonical style. No animated battle moves yet.
-- [ ] **Animated overworld sprites**: party leader visible on the world map, basic 4-direction walking animation.
-- [ ] **NPC sprites** in towns, with basic interact-to-talk.
-- [ ] **At least one ship** rendered on the world map. The maelstrom-zone speed system from [VISION.md](VISION.md) takes its first concrete form (clockwise vs counterclockwise affects travel time on the world map).
+- [ ] **A world map** rendering the maelstrom and its concentric zones.
+- [ ] **At least one ship** the party can board and pilot around the ring.
+- [ ] **The maelstrom-zone speed system** from [VISION.md](VISION.md): clockwise sailing is fast, counterclockwise is slow and dangerous. Travel between regions becomes a meaningful resource decision.
+- [ ] **Three more regions** visitable by ship, each with at least one dungeon and one town.
+- [ ] **First ship upgrade** unlocking deeper-zone access.
+- [ ] **Animated overworld sprites** (4-direction walk cycles) — the static-facing sprites of Layer 1 grow walk frames.
 
 ### Asset requirements
 
-- Tilesets for at least: ocean, beach, jungle, town interior, dungeon stone.
-- Enemy sprite sheets for ~10 enemies.
-- Character portraits + walking sprites for the four party members.
-- Basic UI tiles for menus, the text box border, and the inventory grid.
-- One battle theme, one town theme, one dungeon theme — original or free-licensed; original preferred when the author's music skills support it.
+- Tile sets for ocean, deep ocean, the maelstrom itself, three more regions.
+- Ship sprites (one or two variants).
+- Walk-cycle frames for the four party members and any visible NPCs.
+- Optional: more region themes; first dedicated battle theme.
 
 ### Definition of done
 
-A player can boot the game, see a sprited title screen, walk Kailo around Māra Iti, board a ship, sail to the next island, fight enemies on a sprited battle screen with text narration, win, level up, and save. The Layer 1+2 story content has been ported into the new presentation; nothing has been *cut*, only *re-rendered*.
+A player can boot, sail clockwise to a new region, fight there, dock, return — and feel the directionality of the world. The first ship upgrade is earned and unlocks at least one new region.
 
 ---
 
