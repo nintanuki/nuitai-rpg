@@ -51,6 +51,7 @@ from ui.battle_view import BattleView
 from ui.menu import Menu, MenuItem
 from ui.text_box import TextBox
 from utils.backgrounds import render_scene_background
+from utils.graphics import load_portrait
 
 if TYPE_CHECKING:
     from main import GameManager
@@ -66,10 +67,14 @@ _DEMO_ENEMY_IDS: tuple[str, ...] = (
 )
 
 _ROSTER_TOP_Y = 100
-_ROSTER_ROW_HEIGHT = 28
+# Row height is 40 so the 32 px portrait has 4 px of padding top and bottom.
+_ROSTER_ROW_HEIGHT = 40
 _PARTY_X = 40
 _ENEMY_X = ScreenSettings.WIDTH - 240
 _TARGET_CURSOR_OFFSET = -24
+# Vertical offset applied to portrait blits so the 32 px sprite is
+# centred within the row.
+_PORTRAIT_Y_OFFSET = (_ROSTER_ROW_HEIGHT - UISettings.PORTRAIT_SIZE) // 2
 
 
 def _build_party_combatants(
@@ -413,13 +418,22 @@ class BattleScene(Scene):
         )
         if combatant is target and cursor_visible:
             text_renderer.draw_text(
-                surface, ">", (x + _TARGET_CURSOR_OFFSET, row_y),
+                surface, ">", (x + _TARGET_CURSOR_OFFSET, row_y + _PORTRAIT_Y_OFFSET),
                 color=ColorSettings.YELLOW,
             )
+        # Party members get a portrait blit on the left edge of the row;
+        # the text column sits to the right of it. Enemies have no portrait
+        # art yet, so their text starts at the raw x position.
+        if combatant.is_party:
+            portrait = load_portrait(combatant.id)
+            surface.blit(portrait, (x, row_y + _PORTRAIT_Y_OFFSET))
+            text_x = x + UISettings.PORTRAIT_SIZE + UISettings.PORTRAIT_GAP
+        else:
+            text_x = x
         text_renderer.draw_text(
             surface,
             f"{combatant.name}  {combatant.hp}/{combatant.max_hp}",
-            (x, row_y),
+            (text_x, row_y + _PORTRAIT_Y_OFFSET),
             color=color,
         )
 

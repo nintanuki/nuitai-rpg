@@ -1253,6 +1253,45 @@ def _music_volume_for(self, track_path: str) -> float: ...
 **Why:** Brings the TODO into alignment with the reframed roadmap so each open item has exactly one home and the work order is unambiguous. Honours the house rule (mark `[x]`, do not delete) by carrying every line forward and annotating in place rather than removing.
 **Editor:** Frankie (Claude Opus 4.7)
 
+## 2026-05-12T00:00Z — Character portraits on the battle roster
+
+**File:** core/scenes/battle_scene.py
+**Lines (at time of edit):** import block (~line 50), constants block (~lines 62–66), `_render_roster_line` (~lines 406–424)
+**Before:**
+    from utils.backgrounds import render_scene_background
+
+    _ROSTER_ROW_HEIGHT = 28
+    # (no _PORTRAIT_Y_OFFSET constant)
+
+    # in _render_roster_line:
+    text_renderer.draw_text(
+        surface, ">", (x + _TARGET_CURSOR_OFFSET, row_y), ...
+    )
+    text_renderer.draw_text(
+        surface, f"{combatant.name}  {combatant.hp}/{combatant.max_hp}",
+        (x, row_y), color=color,
+    )
+**After:**
+    from utils.backgrounds import render_scene_background
+    from utils.graphics import load_portrait
+
+    _ROSTER_ROW_HEIGHT = 40  # tall enough for the 32 px portrait
+    _PORTRAIT_Y_OFFSET = (_ROSTER_ROW_HEIGHT - UISettings.PORTRAIT_SIZE) // 2
+
+    # in _render_roster_line:
+    if combatant.is_party:
+        portrait = load_portrait(combatant.id)
+        surface.blit(portrait, (x, row_y + _PORTRAIT_Y_OFFSET))
+        text_x = x + UISettings.PORTRAIT_SIZE + UISettings.PORTRAIT_GAP
+    else:
+        text_x = x
+    text_renderer.draw_text(
+        surface, f"{combatant.name}  {combatant.hp}/{combatant.max_hp}",
+        (text_x, row_y + _PORTRAIT_Y_OFFSET), color=color,
+    )
+**Why:** Party members now show their portrait to the left of their name/HP line in the battle roster, consistent with the party screen. Enemies have no portrait art yet so their rows are unchanged. Row height raised from 28 to 40 to give the 32 px sprite 4 px padding top and bottom; three-member party ends at y=220 which still clears the command panel at y=440.
+**Editor:** GitHub Copilot (Claude Sonnet 4.6)
+
 **File:** docs/ARCHITECTURE.md
 **Lines (at time of edit):** §3 Input (added `is_left` / `is_right` / `is_menu` / `read_held_direction`, added the polled-vs-event-driven movement note); §6 Settings (added `GridSettings` / `OverworldSettings` / `EncounterSettings` / `OverworldPlayerSettings` rows); §14 Source tree (added `assets/graphics/` and `assets/audio/{sound,music}/` lines, added `docs/CONTRIBUTING.md`, added `docs/design/` directory with all three design docs)
 **Before:** §3 mentioned only `is_confirm` / `is_cancel` / `is_up` / `is_down` and a parenthetical "and, with the overworld pass, `is_left` / `is_right`" — `is_menu` was missing entirely; movement-via-polling was undocumented. §6 Settings table missed every overworld-related class added in Pass 1 / Pass 2. §14 Source tree didn't list the design subdir, the audio subdirs, or `CONTRIBUTING.md`.
