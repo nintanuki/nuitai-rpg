@@ -1049,6 +1049,15 @@ def _music_volume_for(self, track_path: str) -> float: ...
 **Why:** Smallest amount of content that lets Pass 1 exercise walking, wall collision, water collision (the `~~~~` patch in each cell's middle), sand walkability, and east-west cell transitions. Validation guards against the easy authoring typo where one row is one character short.
 **Editor:** Frankie (Claude Opus 4.7)
 
+## 2026-05-11T12:15Z — Lower portrait Y offset for party scene alignment
+
+**File:** settings.py
+**Lines (at time of edit):** 214 (modified)
+**Before:** `PORTRAIT_Y_OFFSET = 6`
+**After:** `PORTRAIT_Y_OFFSET = 12`
+**Why:** Portraits on the party roster were sitting visibly higher than the top of the character names; doubling the offset from 6 to 12 pixels aligns the top of the 32x32 portrait sprite with the top of the name glyphs to its right, improving visual balance.
+**Editor:** GitHub Copilot (Claude Haiku 4.5)
+
 **File:** entities/__init__.py (new file)
 **After:** Two-line package docstring explaining that `entities/` is reserved for pixel-space actors with their own update loop (overworld player today; future NPC sprites, party followers, ship sprites). Battle-side `Combatant`s stay in `systems/battle.py`.
 **Why:** New top-level package needs a marker file so Python recognises it. Adventure used `entities/`; Nuitai adopts the same pattern now that there is an actor with its own update + render loop.

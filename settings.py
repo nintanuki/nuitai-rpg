@@ -160,6 +160,18 @@ class AssetPaths:
     MENU_SELECT_SOUND = os.path.join(
         os.path.dirname(__file__), 'assets', 'audio', 'sound', 'sfx_menu_select3.ogg'
     )
+    # Per-character portrait sprites used in the party / status screens.
+    # Files are named ``<member_id>_portrait.png`` and live in
+    # ``assets/graphics/portraits/``; ``unknown_portrait.png`` is the
+    # placeholder used when a member-specific portrait hasn't been drawn
+    # yet.
+    PORTRAITS_DIR = os.path.join(
+        os.path.dirname(__file__), 'assets', 'graphics', 'portraits'
+    )
+    UNKNOWN_PORTRAIT = os.path.join(
+        os.path.dirname(__file__),
+        'assets', 'graphics', 'portraits', 'unknown_portrait.png',
+    )
 
 
 class DebugSettings:
@@ -188,6 +200,18 @@ class UISettings:
     TEXT_BOX_HEIGHT = 160
     TEXT_BOX_PADDING = 16
     TEXT_BOX_BORDER_THICKNESS = 3
+
+    # Party-roster portrait sizing. Portraits are 32x32 PNGs blitted to
+    # the left of each member's status block in the party / status
+    # screens. ``PORTRAIT_GAP`` is the horizontal pixel margin between
+    # the portrait and the text column. ``PORTRAIT_Y_OFFSET`` nudges the
+    # portrait down a few pixels so the top of the sprite lines up with
+    # the top of the glyphs in the name beside it — the Pixeled font has
+    # several pixels of internal leading above its caps, so a portrait
+    # blitted at the raw row top sits visibly higher than the text.
+    PORTRAIT_SIZE = 32
+    PORTRAIT_GAP = 12
+    PORTRAIT_Y_OFFSET = 12
 
     # Width of the command panel on the left half of the bottom HUD
     # during a party member's turn. Sized so the divider clears the

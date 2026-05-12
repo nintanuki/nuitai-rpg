@@ -18,17 +18,38 @@ UP_KEYS = (pygame.K_UP, pygame.K_w)
 DOWN_KEYS = (pygame.K_DOWN, pygame.K_s)
 LEFT_KEYS = (pygame.K_LEFT, pygame.K_a)
 RIGHT_KEYS = (pygame.K_RIGHT, pygame.K_d)
-MENU_KEYS = (pygame.K_TAB,)  # Opens the system / pause menu from gameplay scenes.
+# Keys that open the system / pause menu from gameplay scenes. Enter is
+# included alongside Tab so the keyboard mirrors the controller, where
+# both START and Y open the menu — pressing Enter in the overworld
+# either advances any active text first, then opens the menu the next
+# time it is pressed.
+MENU_KEYS = (pygame.K_TAB, pygame.K_RETURN)
+
+# Controller buttons that confirm a menu choice. ``START`` is included
+# so the title screen can be entered with the most natural "start"
+# gesture on a gamepad; the same button also functions as a menu-open
+# in gameplay scenes (see ``is_menu``), and the two callers are
+# state-disjoint so the overlap is harmless.
+_CONFIRM_BUTTONS = (
+    InputSettings.JOY_BUTTON_A,
+    InputSettings.JOY_BUTTON_START,
+)
+
+# Controller buttons that open the system / pause menu. Y was added
+# alongside START so players can reach the menu without taking their
+# thumb off the face buttons. Tab and Enter on the keyboard map to the
+# same logical action.
+_MENU_BUTTONS = (
+    InputSettings.JOY_BUTTON_START,
+    InputSettings.JOY_BUTTON_Y,
+)
 
 
 def is_confirm(event: pygame.event.Event) -> bool:
-    """Return True if ``event`` is a confirm press (Enter / Z / Space / A button)."""
+    """Return True if ``event`` is a confirm press (Enter / Z / Space / A / Start)."""
     if event.type == pygame.KEYDOWN and event.key in CONFIRM_KEYS:
         return True
-    if event.type == pygame.JOYBUTTONDOWN and event.button in (
-        InputSettings.JOY_BUTTON_A,
-        InputSettings.JOY_BUTTON_START,
-    ):
+    if event.type == pygame.JOYBUTTONDOWN and event.button in _CONFIRM_BUTTONS:
         return True
     return False
 
@@ -91,10 +112,10 @@ def is_right(event: pygame.event.Event) -> bool:
 
 
 def is_menu(event: pygame.event.Event) -> bool:
-    """Return True for the system-menu open press (Tab / START button)."""
+    """Return True for the system-menu open press (Tab / Enter / START / Y)."""
     if event.type == pygame.KEYDOWN and event.key in MENU_KEYS:
         return True
-    if event.type == pygame.JOYBUTTONDOWN and event.button == InputSettings.JOY_BUTTON_START:
+    if event.type == pygame.JOYBUTTONDOWN and event.button in _MENU_BUTTONS:
         return True
     return False
 

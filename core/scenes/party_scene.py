@@ -19,9 +19,10 @@ from typing import TYPE_CHECKING
 import pygame
 
 from core.scene import Scene
-from settings import ColorSettings, FontSettings, ScreenSettings
+from settings import ColorSettings, FontSettings, ScreenSettings, UISettings
 from ui import input_map, text_renderer
 from utils.backgrounds import render_scene_background
+from utils.graphics import load_portrait
 
 if TYPE_CHECKING:
     from main import GameManager
@@ -32,6 +33,11 @@ _ROSTER_TOP_Y = 120
 _ROSTER_ROW_HEIGHT = 60
 _ROSTER_LEFT_X = 60
 _PROMPT_BOTTOM_MARGIN = 30
+# Horizontal start of the text column for each roster row. Sits just
+# right of the portrait so the name / HP / element line lines up cleanly
+# regardless of whether the member has a real portrait or the unknown
+# placeholder.
+_ROSTER_TEXT_X = _ROSTER_LEFT_X + UISettings.PORTRAIT_SIZE + UISettings.PORTRAIT_GAP
 
 
 class PartyScene(Scene):
@@ -91,12 +97,29 @@ class PartyScene(Scene):
     ) -> None:
         """Render one member's status block at the indexed row.
 
+        Each row leads with a 32x32 portrait sprite; the name / HP and
+        element line sit in the text column to the right of it. Members
+        without a member-specific portrait fall back to
+        ``unknown_portrait.png`` so the layout stays visually consistent
+        even before custom art has been drawn.
+
         Args:
             surface: The screen surface to draw onto.
             member: The party member being rendered.
             index: Zero-based row index.
         """
         top_y = _ROSTER_TOP_Y + index * _ROSTER_ROW_HEIGHT
+        # Portrait on the left edge of the row. Loaded through
+        # ``load_portrait`` so the file lookup and ``convert_alpha`` only
+        # happen once per member id across the session. The vertical
+        # offset compensates for the Pixeled font's leading so the top
+        # of the portrait sits roughly level with the top of the name
+        # glyphs to its right.
+        portrait = load_portrait(member.id)
+        surface.blit(
+            portrait,
+            (_ROSTER_LEFT_X, top_y + UISettings.PORTRAIT_Y_OFFSET),
+        )
         # First line: name + current/max HP. Tinted yellow when HP is
         # at zero so a save loaded into "KO'd" state is visually
         # obvious; otherwise plain white.
@@ -106,7 +129,7 @@ class PartyScene(Scene):
         text_renderer.draw_text(
             surface,
             f"{member.name}    HP {member.current_hp} / {member.max_hp}",
-            (_ROSTER_LEFT_X, top_y),
+            (_ROSTER_TEXT_X, top_y),
             color=hp_color,
             size=FontSettings.SIZE_BODY,
         )
@@ -118,7 +141,7 @@ class PartyScene(Scene):
         # with combat.
         font = text_renderer.get_font(FontSettings.SIZE_SMALL)
         element_y = top_y + 24
-        cursor_x = _ROSTER_LEFT_X
+        cursor_x = _ROSTER_TEXT_X
         separator = " + "
         for i, element_id in enumerate(member.elements):
             element_color = ColorSettings.ELEMENT_COLORS.get(

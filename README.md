@@ -52,10 +52,16 @@ python main.py
 
 ## Controls (defaults)
 
-| Action            | Keyboard | Controller            |
-| ----------------- | -------- | --------------------- |
-| Toggle fullscreen | `F11`    | `BACK`                |
-| Quit              | `Esc`    | `START+SELECT+L1+R1`  |
+Every in-game action has both a keyboard binding and a controller binding — anything you can do with one input source you can also do with the other. The controller column uses Xbox-style face-button names; equivalent positions on other gamepads behave identically.
+
+| Action                       | Keyboard                   | Controller             |
+| ---------------------------- | -------------------------- | ---------------------- |
+| Move / navigate menus        | Arrow keys *or* `W A S D`  | D-pad *or* left stick  |
+| Confirm / advance text       | `Enter` / `Z` / `Space`    | `A` (or `START`)       |
+| Cancel / back                | `Backspace` / `X`          | `B`                    |
+| Open system menu (in-game)   | `Tab` / `Enter`            | `START` / `Y`          |
+| Toggle fullscreen            | `F11`                      | `BACK`                 |
+| Quit                         | `Esc`                      | `START + BACK + L1 + R1` |
 
 ## Documentation
 
