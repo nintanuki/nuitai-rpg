@@ -5,12 +5,12 @@
     "stats": {
         "level": 5,
         "hp": 22,
-        "attack": 9,
+        "attack": 8,
         "defense": 3,
         "magic": 7,
-        "resist": 4,
-        "speed": 9,
-        "luck": 7
+        "resist": 5,
+        "speed": 5,
+        "luck": 6
     },
     "learnset": ["curse", "spirit_blast"]
 }

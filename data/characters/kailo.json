@@ -5,12 +5,12 @@
     "stats": {
         "level": 5,
         "hp": 30,
-        "attack": 8,
+        "attack": 9,
         "defense": 7,
         "magic": 5,
-        "resist": 5,
-        "speed": 6,
-        "luck": 4
+        "resist": 4,
+        "speed": 9,
+        "luck": 7
     },
     "learnset": ["fire_punch", "wave_fist"]
 }
