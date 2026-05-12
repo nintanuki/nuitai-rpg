@@ -2,6 +2,15 @@
     "id": "hina",
     "name": "Hina",
     "elements": ["ra", "lau"],
-    "stats": {"hp": 25, "attack": 7},
+    "stats": {
+        "level": 5,
+        "hp": 25,
+        "attack": 7,
+        "defense": 4,
+        "magic": 9,
+        "resist": 8,
+        "speed": 5,
+        "luck": 6
+    },
     "learnset": ["heal", "shakas_light"]
 }

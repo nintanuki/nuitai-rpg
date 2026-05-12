@@ -2,6 +2,15 @@
     "id": "tawiri",
     "name": "Tawiri",
     "elements": ["mana", "aku"],
-    "stats": {"hp": 22, "attack": 9},
+    "stats": {
+        "level": 5,
+        "hp": 22,
+        "attack": 9,
+        "defense": 3,
+        "magic": 7,
+        "resist": 4,
+        "speed": 9,
+        "luck": 7
+    },
     "learnset": ["curse", "spirit_blast"]
 }

@@ -2,6 +2,15 @@
     "id": "kailo",
     "name": "Kailo",
     "elements": ["ahi", "wai"],
-    "stats": {"hp": 30, "attack": 8},
+    "stats": {
+        "level": 5,
+        "hp": 30,
+        "attack": 8,
+        "defense": 7,
+        "magic": 5,
+        "resist": 5,
+        "speed": 6,
+        "luck": 4
+    },
     "learnset": ["fire_punch", "wave_fist"]
 }
