@@ -16,7 +16,12 @@ beyond ``hp`` and ``attack``.
 
 from __future__ import annotations
 
+import os
+import sys
 from typing import TYPE_CHECKING
+
+if __package__ is None or __package__ == "":
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 import pygame
 
@@ -210,7 +215,7 @@ class PartyScene(Scene):
         # command panel's ability rows so the screen reads consistent
         # with combat.
         font = text_renderer.get_font(FontSettings.SIZE_SMALL)
-        element_y = top_y + 24
+        element_y = top_y + UISettings.ROSTER_ELEMENT_LINE_Y_OFFSET
         cursor_x = _ROSTER_TEXT_X
         separator = " + "
         for i, element_id in enumerate(member.elements):

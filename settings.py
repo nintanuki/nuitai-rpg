@@ -212,6 +212,7 @@ class UISettings:
     PORTRAIT_SIZE = 32
     PORTRAIT_GAP = 12
     PORTRAIT_Y_OFFSET = 12
+    ROSTER_ELEMENT_LINE_Y_OFFSET = 24
 
     # Width of the command panel on the left half of the bottom HUD
     # during a party member's turn. Sized so the divider clears the

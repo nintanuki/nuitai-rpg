@@ -36,6 +36,75 @@ template below, with one `**File:** ... **Why:** ...` block per file touched.
 
 ---
 
+## 2026-05-13 — allow direct execution of party scene file
+
+**File:** core/scenes/party_scene.py
+**Lines (at time of edit):** 20-24 (modified)
+**Before:**
+  from __future__ import annotations
+
+  from typing import TYPE_CHECKING
+
+  import pygame
+
+  from core.scene import Scene
+**After:**
+  from __future__ import annotations
+
+  import os
+  import sys
+  from typing import TYPE_CHECKING
+
+  if __package__ is None or __package__ == "":
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+  import pygame
+
+  from core.scene import Scene
+**Why:** Running the scene file directly from VS Code did not put the project root on `sys.path`, so `core.*` imports failed; the bootstrap makes the module resilient to that launch mode.
+**Editor:** GitHub Copilot (GPT-5.4 mini)
+
+## 2026-05-13 — show elemental labels in battle rosters
+
+**File:** settings.py
+**Lines (at time of edit):** 215-215 (modified)
+**Before:**
+  `PORTRAIT_Y_OFFSET = 12`
+**After:**
+  `PORTRAIT_Y_OFFSET = 12`
+  `ROSTER_ELEMENT_LINE_Y_OFFSET = 24`
+**Why:** Keep the roster-row spacing used by party status and battle status on a shared UI constant instead of duplicating the offset in multiple scenes.
+**Editor:** GitHub Copilot (GPT-5.4 mini)
+
+**File:** core/scenes/party_scene.py
+**Lines (at time of edit):** 213-213 (modified)
+**Before:**
+  `element_y = top_y + 24`
+**After:**
+  `element_y = top_y + UISettings.ROSTER_ELEMENT_LINE_Y_OFFSET`
+**Why:** Reuse the shared roster-line spacing constant so the party screen and battle screen stay visually aligned.
+**Editor:** GitHub Copilot (GPT-5.4 mini)
+
+**File:** core/scenes/battle_scene.py
+**Lines (at time of edit):** 439-467 (modified)
+**Before:**
+  roster lines only drew name / HP, so battle did not expose
+  elemental identity the way the party scene does.
+**After:**
+  roster lines still draw name / HP, then render the member's
+  two-element pair or the enemy's single element below it using the
+  same accent colors as the party screen.
+**Why:** The battle scene should surface the same elemental identity that the party/status scene already shows, so the combat HUD communicates element matchups without forcing the player to leave battle.
+**Editor:** GitHub Copilot (GPT-5.4 mini)
+
+**File:** docs/ARCHITECTURE.md
+**Lines (at time of edit):** 95-95 (modified)
+**Before:** battle roster lines highlighted the active actor but did not mention the elemental label row.
+**After:** battle roster lines now include the combatant's elemental label(s) under the name / HP line, matching the party screen's elemental readout.
+**Why:** Keep the architecture doc in sync with the battle HUD behavior so future UI work knows the roster already surfaces element identity.
+**Editor:** GitHub Copilot (GPT-5.4 mini)
+
+
 ## 2026-05-07 — Generic-template cleanup pass
 
 **File:** main.py
@@ -1298,3 +1367,40 @@ def _music_volume_for(self, track_path: str) -> float: ...
 **After:** §3 lists every `input_map` helper that exists, explains the polled-vs-event-driven split for movement, and notes the upcoming Y-rebind. §6 documents the four new settings classes alongside the existing ones. §14 reflects the full doc tree (including the three design files) and the asset directory shape so a fresh reader sees the actual layout.
 **Why:** Standing rule that ARCHITECTURE.md describes the code as it currently exists. These three sections had drifted during Pass 1 / Pass 2 / today's design pass; this brings them current. (Per the same rule, the *forward-looking* design decisions made today live in `docs/design/oneshot.md` rather than being inserted into ARCHITECTURE.md prematurely.)
 **Editor:** Frankie (Claude Opus 4.7)
+
+## 2026-05-13T00:00Z — increase battle roster spacing to avoid element/name crowding
+
+**File:** core/scenes/battle_scene.py
+**Lines (at time of edit):** 70-72 (modified)
+**Before:**
+  # Row height is 40 so the 32 px portrait has 4 px of padding top and bottom.
+  _ROSTER_ROW_HEIGHT = 40
+**After:**
+  # Match the party screen's looser row rhythm so name/HP and element
+  # lines do not crowd each other or the next row.
+  _ROSTER_ROW_HEIGHT = 60
+**Why:** The battle roster's element line was visually crowding the name/HP rows. Raising row height to match the party menu rhythm increases vertical separation between portraits, names, and element labels while preserving existing rendering logic.
+**Editor:** GitHub Copilot (GPT-5.3-Codex)
+
+## 2026-05-13T00:01Z — fix battle roster element overlap and portrait alignment
+
+**File:** core/scenes/battle_scene.py
+**Lines (at time of edit):** 75-78 (modified), ~430-450 (modified)
+**Before:**
+    _TARGET_CURSOR_OFFSET = -24
+    # Vertical offset applied to portrait blits so the 32 px sprite is
+    # centred within the row.
+    _PORTRAIT_Y_OFFSET = (_ROSTER_ROW_HEIGHT - UISettings.PORTRAIT_SIZE) // 2
+
+    # in _render_roster_line:
+    surface.blit(portrait, (x, row_y + _PORTRAIT_Y_OFFSET))
+    text_renderer.draw_text(surface, f"{name}  {hp}/{max_hp}", (text_x, row_y + _PORTRAIT_Y_OFFSET), ...)
+**After:**
+    _TARGET_CURSOR_OFFSET = -24
+    # (constant removed)
+
+    # in _render_roster_line:
+    surface.blit(portrait, (x, row_y + UISettings.PORTRAIT_Y_OFFSET))
+    text_renderer.draw_text(surface, f"{name}  {hp}/{max_hp}", (text_x, row_y), ...)
+**Why:** The local _PORTRAIT_Y_OFFSET was 14 ((60-32)//2), placing the name at row_y+14 while elements stayed at row_y+24 — only a 10px gap, less than the 16px font height, causing the element labels to overlap the name glyphs. Portrait used a different offset (14) from the party screen (UISettings.PORTRAIT_Y_OFFSET=12), making alignment inconsistent. Fix mirrors the party screen layout exactly: name at row_y, portrait at row_y+UISettings.PORTRAIT_Y_OFFSET (12), elements at row_y+ROSTER_ELEMENT_LINE_Y_OFFSET (24).
+**Editor:** GitHub Copilot (Claude Sonnet 4.6)

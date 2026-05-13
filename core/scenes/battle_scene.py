@@ -67,14 +67,12 @@ _DEMO_ENEMY_IDS: tuple[str, ...] = (
 )
 
 _ROSTER_TOP_Y = 100
-# Row height is 40 so the 32 px portrait has 4 px of padding top and bottom.
-_ROSTER_ROW_HEIGHT = 40
+# Match the party screen's looser row rhythm so name/HP and element
+# lines do not crowd each other or the next row.
+_ROSTER_ROW_HEIGHT = 60
 _PARTY_X = 40
 _ENEMY_X = ScreenSettings.WIDTH - 240
 _TARGET_CURSOR_OFFSET = -24
-# Vertical offset applied to portrait blits so the 32 px sprite is
-# centred within the row.
-_PORTRAIT_Y_OFFSET = (_ROSTER_ROW_HEIGHT - UISettings.PORTRAIT_SIZE) // 2
 
 
 def _build_party_combatants(
@@ -418,7 +416,7 @@ class BattleScene(Scene):
         )
         if combatant is target and cursor_visible:
             text_renderer.draw_text(
-                surface, ">", (x + _TARGET_CURSOR_OFFSET, row_y + _PORTRAIT_Y_OFFSET),
+                surface, ">", (x + _TARGET_CURSOR_OFFSET, row_y + UISettings.PORTRAIT_Y_OFFSET),
                 color=ColorSettings.YELLOW,
             )
         # Party members get a portrait blit on the left edge of the row;
@@ -426,16 +424,56 @@ class BattleScene(Scene):
         # art yet, so their text starts at the raw x position.
         if combatant.is_party:
             portrait = load_portrait(combatant.id)
-            surface.blit(portrait, (x, row_y + _PORTRAIT_Y_OFFSET))
+            surface.blit(portrait, (x, row_y + UISettings.PORTRAIT_Y_OFFSET))
             text_x = x + UISettings.PORTRAIT_SIZE + UISettings.PORTRAIT_GAP
         else:
             text_x = x
         text_renderer.draw_text(
             surface,
             f"{combatant.name}  {combatant.hp}/{combatant.max_hp}",
-            (text_x, row_y + _PORTRAIT_Y_OFFSET),
+            (text_x, row_y),
             color=color,
         )
+        self._render_element_line(surface, combatant, text_x, row_y)
+
+    def _render_element_line(
+        self,
+        surface: pygame.Surface,
+        combatant: Combatant,
+        text_x: int,
+        row_y: int,
+    ) -> None:
+        """Render the combatant's element label(s) under their name line."""
+        member = self.gm.party.find(combatant.id) if combatant.is_party else None
+        if member is not None:
+            element_ids = member.elements
+        else:
+            element_ids = (combatant.element.value,)
+        font = text_renderer.get_font(FontSettings.SIZE_SMALL)
+        element_y = row_y + UISettings.ROSTER_ELEMENT_LINE_Y_OFFSET
+        cursor_x = text_x
+        separator = " + "
+        for index, element_id in enumerate(element_ids):
+            element_color = ColorSettings.ELEMENT_COLORS.get(
+                element_id, ColorSettings.WHITE
+            )
+            text_renderer.draw_text(
+                surface,
+                element_id,
+                (cursor_x, element_y),
+                color=element_color,
+                size=FontSettings.SIZE_SMALL,
+            )
+            cursor_x += font.size(element_id.upper())[0]
+            if index < len(element_ids) - 1:
+                text_renderer.draw_text(
+                    surface,
+                    separator,
+                    (cursor_x, element_y),
+                    color=ColorSettings.GRAY,
+                    size=FontSettings.SIZE_SMALL,
+                )
+                cursor_x += font.size(separator.upper())[0]
 
     def _render_command_panel(self, surface: pygame.Surface) -> None:
         host_h = surface.get_height()
