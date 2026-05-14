@@ -1404,3 +1404,29 @@ def _music_volume_for(self, track_path: str) -> float: ...
     text_renderer.draw_text(surface, f"{name}  {hp}/{max_hp}", (text_x, row_y), ...)
 **Why:** The local _PORTRAIT_Y_OFFSET was 14 ((60-32)//2), placing the name at row_y+14 while elements stayed at row_y+24 — only a 10px gap, less than the 16px font height, causing the element labels to overlap the name glyphs. Portrait used a different offset (14) from the party screen (UISettings.PORTRAIT_Y_OFFSET=12), making alignment inconsistent. Fix mirrors the party screen layout exactly: name at row_y, portrait at row_y+UISettings.PORTRAIT_Y_OFFSET (12), elements at row_y+ROSTER_ELEMENT_LINE_Y_OFFSET (24).
 **Editor:** GitHub Copilot (Claude Sonnet 4.6)
+
+## 2026-05-13T00:02Z — update roster layout for 44x44 portraits
+
+**File:** settings.py
+**Lines (at time of edit):** 204-214 (modified)
+**Before:**
+    # Portraits are 32x32 PNGs ...
+    PORTRAIT_SIZE = 32
+    PORTRAIT_GAP = 12
+**After:**
+    # Portraits are 44x44 PNGs ...
+    PORTRAIT_SIZE = 44
+    PORTRAIT_GAP = 16
+**Why:** Portraits replaced with 44x44 images. PORTRAIT_GAP is kept equal to the vertical gap between consecutive portrait sprites (_ROSTER_ROW_HEIGHT - PORTRAIT_SIZE = 60 - 44 = 16px) so all four sides of each portrait have uniform breathing room.
+
+**File:** core/scenes/battle_scene.py
+**Lines (at time of edit):** 430-453 (modified)
+**Before:**
+    text_renderer.draw_text(surface, ..., (text_x, row_y), ...)  # name/HP
+    element_y = row_y + UISettings.ROSTER_ELEMENT_LINE_Y_OFFSET
+**After:**
+    text_renderer.draw_text(surface, ..., (text_x, row_y + UISettings.PORTRAIT_Y_OFFSET), ...)  # name/HP
+    portrait_bottom = row_y + UISettings.PORTRAIT_Y_OFFSET + UISettings.PORTRAIT_SIZE
+    element_y = portrait_bottom - font.get_height()
+**Why:** With 44px portraits the name/HP and element lines needed to be redistributed vertically. Name/HP top is now level with the portrait top (row_y + PORTRAIT_Y_OFFSET); element bottom is level with the portrait bottom (portrait_bottom - font.get_height()), stretching the text block across the full portrait height.
+**Editor:** GitHub Copilot (Claude Sonnet 4.6)

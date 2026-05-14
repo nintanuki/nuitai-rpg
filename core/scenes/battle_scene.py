@@ -428,6 +428,12 @@ class BattleScene(Scene):
             text_x = x + UISettings.PORTRAIT_SIZE + UISettings.PORTRAIT_GAP
         else:
             text_x = x
+        # Name line is drawn at row_y (NOT row_y + PORTRAIT_Y_OFFSET).
+        # The portrait is offset down by PORTRAIT_Y_OFFSET to align its
+        # top with the visible top of the name glyphs; if we apply the
+        # same offset to the text too, the name visibly drops below the
+        # portrait because Pixeled font adds its own internal leading on
+        # top of whatever Y we draw at. Matches party_scene's approach.
         text_renderer.draw_text(
             surface,
             f"{combatant.name}  {combatant.hp}/{combatant.max_hp}",

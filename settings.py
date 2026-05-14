@@ -201,18 +201,29 @@ class UISettings:
     TEXT_BOX_PADDING = 16
     TEXT_BOX_BORDER_THICKNESS = 3
 
-    # Party-roster portrait sizing. Portraits are 32x32 PNGs blitted to
+    # Party-roster portrait sizing. Portraits are 44x44 PNGs blitted to
     # the left of each member's status block in the party / status
     # screens. ``PORTRAIT_GAP`` is the horizontal pixel margin between
-    # the portrait and the text column. ``PORTRAIT_Y_OFFSET`` nudges the
-    # portrait down a few pixels so the top of the sprite lines up with
-    # the top of the glyphs in the name beside it — the Pixeled font has
-    # several pixels of internal leading above its caps, so a portrait
-    # blitted at the raw row top sits visibly higher than the text.
-    PORTRAIT_SIZE = 32
-    PORTRAIT_GAP = 12
+    # the portrait right edge and the text column; it is kept equal to
+    # the vertical gap between consecutive portrait sprites so all four
+    # sides of each portrait have a uniform breathing room
+    # (``_ROSTER_ROW_HEIGHT - PORTRAIT_SIZE`` on a 60px row = 16px).
+    # ``PORTRAIT_Y_OFFSET`` nudges the portrait down a few pixels so the
+    # top of the sprite lines up with the top of the glyphs in the name
+    # beside it — the Pixeled font has several pixels of internal leading
+    # above its caps, so a portrait blitted at the raw row top sits
+    # visibly higher than the text.
+    PORTRAIT_SIZE = 44
+    PORTRAIT_GAP = 16
     PORTRAIT_Y_OFFSET = 12
-    ROSTER_ELEMENT_LINE_Y_OFFSET = 24
+    # Vertical gap between the top of the name line and the top of the
+    # element line. The old "44 = portrait bottom" math assumed the
+    # font's visible glyph height matched its point size, but Pixeled
+    # has several pixels of internal leading top and bottom, so 44 left
+    # the element line drifting below the portrait. 32 keeps name and
+    # element as a tight two-line block that fits within the portrait's
+    # vertical span.
+    ROSTER_ELEMENT_LINE_Y_OFFSET = 32
 
     # Width of the command panel on the left half of the bottom HUD
     # during a party member's turn. Sized so the divider clears the

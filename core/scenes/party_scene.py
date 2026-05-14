@@ -39,7 +39,10 @@ if TYPE_CHECKING:
 _HEADING_POSITION = (40, 40)
 _ROSTER_TOP_Y = 120
 _ROSTER_ROW_HEIGHT = 60
-_ROSTER_LEFT_X = 60
+# Roster column anchored at the same X as the heading so the cursor
+# triangle, portraits, and bottom prompt all read as a single left-aligned
+# stack with the "PARTY" title above them.
+_ROSTER_LEFT_X = 40
 _PROMPT_BOTTOM_MARGIN = 30
 # Horizontal start of the text column for each roster row. Sits just
 # right of the portrait so the name / HP / element line lines up cleanly
