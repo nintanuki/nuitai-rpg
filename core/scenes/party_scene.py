@@ -181,10 +181,19 @@ class PartyScene(Scene):
         # so it sits flush against the left edge of the row rather than
         # bleeding into the portrait pixels.
         if index == self._cursor:
+            # Center the triangle on the portrait's vertical midpoint
+            # rather than the raw row top, so the cursor sits in the
+            # middle of the portrait's left edge regardless of how the
+            # portrait offset is tuned.
+            portrait_center_y = (
+                top_y
+                + UISettings.PORTRAIT_Y_OFFSET
+                + UISettings.PORTRAIT_SIZE // 2
+            )
             triangle = [
-                (_ROSTER_LEFT_X - 22, top_y + 10),
-                (_ROSTER_LEFT_X - 22, top_y + 26),
-                (_ROSTER_LEFT_X - 8, top_y + 18),
+                (_ROSTER_LEFT_X - 22, portrait_center_y - 8),
+                (_ROSTER_LEFT_X - 22, portrait_center_y + 8),
+                (_ROSTER_LEFT_X - 8, portrait_center_y),
             ]
             pygame.draw.polygon(surface, _CURSOR_COLOR, triangle)
         # Portrait on the left edge of the row. Loaded through
