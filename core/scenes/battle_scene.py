@@ -48,6 +48,7 @@ from settings import BattleSettings, ColorSettings, FontSettings, ScreenSettings
 from systems.battle import Battle, Combatant
 from ui import input_map, text_renderer
 from ui.battle_view import BattleView
+from ui.layout import DebugOverlay, RosterRowLayout
 from ui.menu import Menu, MenuItem
 from ui.text_box import TextBox
 from utils.backgrounds import render_scene_background
@@ -72,7 +73,11 @@ _ROSTER_TOP_Y = 100
 _ROSTER_ROW_HEIGHT = 60
 _PARTY_X = 40
 _ENEMY_X = ScreenSettings.WIDTH - 240
-_TARGET_CURSOR_OFFSET = -24
+# NOTE: Per-row layout (portrait rect, name pos, element pos, target
+# glyph) lives in ``ui.layout.RosterRowLayout``. Party rows pass
+# ``has_portrait=True``; enemy rows pass False because enemies have no
+# portrait art yet. Edit the layout helper, not this scene, to change
+# how a row is composed.
 
 
 def _build_party_combatants(
@@ -409,77 +414,98 @@ class BattleScene(Scene):
         target: Combatant | None,
         cursor_visible: bool,
     ) -> None:
+        """Draw one combatant's roster row (portrait + name + element).
+
+        Layout is delegated to ``RosterRowLayout`` — this method only
+        decides *what* to draw and in what color. Party members get
+        portraits; enemies pass ``has_portrait=False`` and the layout
+        helper collapses the text column to the row's left edge.
+        """
         row_y = _ROSTER_TOP_Y + index * _ROSTER_ROW_HEIGHT
+        layout = RosterRowLayout(
+            left_x=x, top_y=row_y, has_portrait=combatant.is_party,
+        )
         color = (
             ColorSettings.YELLOW if combatant.id == active_id
             else ColorSettings.WHITE
         )
+
+        # Blinking ">" target cursor on the row currently being aimed
+        # at. Position comes from the layout helper so it stays anchored
+        # if the row geometry changes.
         if combatant is target and cursor_visible:
             text_renderer.draw_text(
-                surface, ">", (x + _TARGET_CURSOR_OFFSET, row_y + UISettings.PORTRAIT_Y_OFFSET),
+                surface, ">", layout.target_glyph_pos,
                 color=ColorSettings.YELLOW,
             )
-        # Party members get a portrait blit on the left edge of the row;
-        # the text column sits to the right of it. Enemies have no portrait
-        # art yet, so their text starts at the raw x position.
-        if combatant.is_party:
-            portrait = load_portrait(combatant.id)
-            surface.blit(portrait, (x, row_y + UISettings.PORTRAIT_Y_OFFSET))
-            text_x = x + UISettings.PORTRAIT_SIZE + UISettings.PORTRAIT_GAP
-        else:
-            text_x = x
-        # Name line is drawn at row_y (NOT row_y + PORTRAIT_Y_OFFSET).
-        # The portrait is offset down by PORTRAIT_Y_OFFSET to align its
-        # top with the visible top of the name glyphs; if we apply the
-        # same offset to the text too, the name visibly drops below the
-        # portrait because Pixeled font adds its own internal leading on
-        # top of whatever Y we draw at. Matches party_scene's approach.
+
+        # Portrait sprite (party members only).
+        portrait_rect = layout.portrait_rect
+        if portrait_rect is not None:
+            surface.blit(load_portrait(combatant.id), portrait_rect.topleft)
+            DebugOverlay.rect(
+                surface, portrait_rect, "portrait",
+                DebugOverlay.COLOR_PORTRAIT,
+            )
+
+        # Name + HP line.
         text_renderer.draw_text(
             surface,
             f"{combatant.name}  {combatant.hp}/{combatant.max_hp}",
-            (text_x, row_y),
+            layout.name_pos,
             color=color,
         )
-        self._render_element_line(surface, combatant, text_x, row_y)
+        DebugOverlay.point(
+            surface, layout.name_pos, "name", DebugOverlay.COLOR_TEXT,
+        )
+
+        # Element line under the name. Party combatants look up the
+        # full element pair from the persistent PartyMember; enemies
+        # fall back to their single combatant-level element.
+        member = (
+            self.gm.party.find(combatant.id) if combatant.is_party else None
+        )
+        element_ids = (
+            member.elements if member is not None
+            else (combatant.element.value,)
+        )
+        self._render_element_line(surface, element_ids, layout.element_pos)
+        DebugOverlay.point(
+            surface, layout.element_pos, "elements",
+            DebugOverlay.COLOR_TEXT,
+        )
 
     def _render_element_line(
         self,
         surface: pygame.Surface,
-        combatant: Combatant,
-        text_x: int,
-        row_y: int,
+        element_ids: tuple,
+        pos: tuple[int, int],
     ) -> None:
-        """Render the combatant's element label(s) under their name line."""
-        member = self.gm.party.find(combatant.id) if combatant.is_party else None
-        if member is not None:
-            element_ids = member.elements
-        else:
-            element_ids = (combatant.element.value,)
+        """Draw a multi-color element-pair line starting at ``pos``.
+
+        Each element id is rendered in its accent color from
+        ``ColorSettings.ELEMENT_COLORS`` and separated by gray " + ".
+        Same shape as ``party_scene.PartyScene._render_element_line`` —
+        if either drifts, fold them into a shared helper.
+        """
         font = text_renderer.get_font(FontSettings.SIZE_SMALL)
-        element_y = row_y + UISettings.ROSTER_ELEMENT_LINE_Y_OFFSET
-        cursor_x = text_x
+        x, y = pos
         separator = " + "
-        for index, element_id in enumerate(element_ids):
-            element_color = ColorSettings.ELEMENT_COLORS.get(
+        for i, element_id in enumerate(element_ids):
+            color = ColorSettings.ELEMENT_COLORS.get(
                 element_id, ColorSettings.WHITE
             )
             text_renderer.draw_text(
-                surface,
-                element_id,
-                (cursor_x, element_y),
-                color=element_color,
-                size=FontSettings.SIZE_SMALL,
+                surface, element_id, (x, y),
+                color=color, size=FontSettings.SIZE_SMALL,
             )
-            cursor_x += font.size(element_id.upper())[0]
-            if index < len(element_ids) - 1:
+            x += font.size(element_id.upper())[0]
+            if i < len(element_ids) - 1:
                 text_renderer.draw_text(
-                    surface,
-                    separator,
-                    (cursor_x, element_y),
-                    color=ColorSettings.GRAY,
-                    size=FontSettings.SIZE_SMALL,
+                    surface, separator, (x, y),
+                    color=ColorSettings.GRAY, size=FontSettings.SIZE_SMALL,
                 )
-                cursor_x += font.size(separator.upper())[0]
+                x += font.size(separator.upper())[0]
 
     def _render_command_panel(self, surface: pygame.Surface) -> None:
         host_h = surface.get_height()

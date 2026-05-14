@@ -10,6 +10,7 @@ from core.scenes.title_scene import TitleScene
 from settings import ScreenSettings, InputSettings, ColorSettings
 from systems.audio_manager import AudioManager
 from systems.party import Party
+from ui.layout import DebugOverlay
 
 
 class GameManager:
@@ -117,6 +118,14 @@ class GameManager:
         if event.key == pygame.K_F11:
             pygame.display.toggle_fullscreen()
             self.full_screen = not self.full_screen
+
+        # F1 toggles the UI debug overlay (see ui/layout.py). Off by
+        # default; when on, every scene that registers debug rects /
+        # points will outline them with labels so you can SEE the
+        # layout coordinates instead of guessing. Falls through to
+        # scenes intentionally.
+        if event.key == pygame.K_F1:
+            DebugOverlay.toggle()
 
     def _handle_joybuttondown(self, event) -> None:
         """Route one controller button press."""

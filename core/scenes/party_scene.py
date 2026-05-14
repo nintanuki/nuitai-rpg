@@ -26,8 +26,9 @@ if __package__ is None or __package__ == "":
 import pygame
 
 from core.scene import Scene
-from settings import ColorSettings, FontSettings, ScreenSettings, UISettings
+from settings import ColorSettings, FontSettings, ScreenSettings
 from ui import input_map, text_renderer
+from ui.layout import DebugOverlay, RosterRowLayout
 from utils.backgrounds import render_scene_background
 from utils.graphics import load_portrait
 
@@ -44,11 +45,11 @@ _ROSTER_ROW_HEIGHT = 60
 # stack with the "PARTY" title above them.
 _ROSTER_LEFT_X = 40
 _PROMPT_BOTTOM_MARGIN = 30
-# Horizontal start of the text column for each roster row. Sits just
-# right of the portrait so the name / HP / element line lines up cleanly
-# regardless of whether the member has a real portrait or the unknown
-# placeholder.
-_ROSTER_TEXT_X = _ROSTER_LEFT_X + UISettings.PORTRAIT_SIZE + UISettings.PORTRAIT_GAP
+# NOTE: Per-row layout (portrait rect, name pos, element pos, cursor
+# triangle) used to live as raw arithmetic in ``_render_member``. It now
+# lives in ``ui.layout.RosterRowLayout`` — one anchor (left_x, top_y)
+# in, all derived positions out via Rect properties. If you want to
+# adjust how a row is composed, edit RosterRowLayout, not this scene.
 
 # Stats panel layout (right column). The panel mirrors the area the
 # player sees as the empty space to the right of the roster — it shows
@@ -164,12 +165,16 @@ class PartyScene(Scene):
     ) -> None:
         """Render one member's status block at the indexed row.
 
-        Each row leads with a 32x32 portrait sprite; the name / HP and
+        Each row leads with a portrait sprite; the name / HP and
         element line sit in the text column to the right of it. Members
         without a member-specific portrait fall back to
         ``unknown_portrait.png`` so the layout stays visually consistent
         even before custom art has been drawn. The currently-selected
         row gets a small yellow cursor triangle drawn to its left.
+
+        Layout math is entirely outsourced to ``RosterRowLayout``: this
+        method only decides *what* to draw, not *where*. To change the
+        where, edit ``ui/layout.py``.
 
         Args:
             surface: The screen surface to draw onto.
@@ -177,80 +182,81 @@ class PartyScene(Scene):
             index: Zero-based row index.
         """
         top_y = _ROSTER_TOP_Y + index * _ROSTER_ROW_HEIGHT
+        # One layout helper per row. Cheap (frozen dataclass) and gives
+        # us named anchors for every element in this row.
+        layout = RosterRowLayout(left_x=_ROSTER_LEFT_X, top_y=top_y)
+
         # Cursor triangle on the active row. Drawn before the portrait
-        # so it sits flush against the left edge of the row rather than
-        # bleeding into the portrait pixels.
+        # so the polygon ordering doesn't matter for z-order.
         if index == self._cursor:
-            # Center the triangle on the portrait's vertical midpoint
-            # rather than the raw row top, so the cursor sits in the
-            # middle of the portrait's left edge regardless of how the
-            # portrait offset is tuned.
-            portrait_center_y = (
-                top_y
-                + UISettings.PORTRAIT_Y_OFFSET
-                + UISettings.PORTRAIT_SIZE // 2
-            )
-            triangle = [
-                (_ROSTER_LEFT_X - 22, portrait_center_y - 8),
-                (_ROSTER_LEFT_X - 22, portrait_center_y + 8),
-                (_ROSTER_LEFT_X - 8, portrait_center_y),
-            ]
+            triangle = layout.selection_triangle()
             pygame.draw.polygon(surface, _CURSOR_COLOR, triangle)
-        # Portrait on the left edge of the row. Loaded through
-        # ``load_portrait`` so the file lookup and ``convert_alpha`` only
-        # happen once per member id across the session. The vertical
-        # offset compensates for the Pixeled font's leading so the top
-        # of the portrait sits roughly level with the top of the name
-        # glyphs to its right.
+            DebugOverlay.polygon(
+                surface, triangle, "cursor", DebugOverlay.COLOR_CURSOR,
+            )
+
+        # Portrait sprite. ``load_portrait`` caches the convert_alpha
+        # call so re-rendering this scene every frame stays cheap.
         portrait = load_portrait(member.id)
-        surface.blit(
-            portrait,
-            (_ROSTER_LEFT_X, top_y + UISettings.PORTRAIT_Y_OFFSET),
+        portrait_rect = layout.portrait_rect
+        surface.blit(portrait, portrait_rect.topleft)
+        DebugOverlay.rect(
+            surface, portrait_rect, "portrait", DebugOverlay.COLOR_PORTRAIT,
         )
+
         # First line: name + current/max HP. Tinted red when HP is
-        # at zero so a save loaded into "KO'd" state is visually
-        # obvious; otherwise plain white.
+        # zero so a save loaded into "KO'd" state is visually obvious.
         hp_color = (
             ColorSettings.RED if member.current_hp <= 0 else ColorSettings.WHITE
         )
         text_renderer.draw_text(
             surface,
             f"{member.name}    HP {member.current_hp} / {member.max_hp}",
-            (_ROSTER_TEXT_X, top_y),
+            layout.name_pos,
             color=hp_color,
             size=FontSettings.SIZE_BODY,
         )
-        # Second line: element pair, each tinted by its accent. We
-        # render them side by side using ``font.size`` to advance the
-        # cursor so the per-element color survives without manual
-        # string concatenation. The accent colors match the battle
-        # command panel's ability rows so the screen reads consistent
-        # with combat.
+        DebugOverlay.point(
+            surface, layout.name_pos, "name", DebugOverlay.COLOR_TEXT,
+        )
+
+        # Second line: element pair, each tinted by its accent color.
+        DebugOverlay.point(
+            surface, layout.element_pos, "elements", DebugOverlay.COLOR_TEXT,
+        )
+        self._render_element_line(surface, member.elements, layout.element_pos)
+
+    def _render_element_line(
+        self,
+        surface: pygame.Surface,
+        element_ids: tuple,
+        pos: tuple[int, int],
+    ) -> None:
+        """Draw a multi-color element-pair line starting at ``pos``.
+
+        Each element id is rendered in its accent color from
+        ``ColorSettings.ELEMENT_COLORS`` and separated by gray " + ".
+        Extracted into its own method so the stats panel can reuse it
+        for the header element line.
+        """
         font = text_renderer.get_font(FontSettings.SIZE_SMALL)
-        element_y = top_y + UISettings.ROSTER_ELEMENT_LINE_Y_OFFSET
-        cursor_x = _ROSTER_TEXT_X
+        x, y = pos
         separator = " + "
-        for i, element_id in enumerate(member.elements):
-            element_color = ColorSettings.ELEMENT_COLORS.get(
+        for i, element_id in enumerate(element_ids):
+            color = ColorSettings.ELEMENT_COLORS.get(
                 element_id, ColorSettings.WHITE
             )
             text_renderer.draw_text(
-                surface,
-                element_id,
-                (cursor_x, element_y),
-                color=element_color,
-                size=FontSettings.SIZE_SMALL,
+                surface, element_id, (x, y),
+                color=color, size=FontSettings.SIZE_SMALL,
             )
-            cursor_x += font.size(element_id.upper())[0]
-            if i < len(member.elements) - 1:
+            x += font.size(element_id.upper())[0]
+            if i < len(element_ids) - 1:
                 text_renderer.draw_text(
-                    surface,
-                    separator,
-                    (cursor_x, element_y),
-                    color=ColorSettings.GRAY,
-                    size=FontSettings.SIZE_SMALL,
+                    surface, separator, (x, y),
+                    color=ColorSettings.GRAY, size=FontSettings.SIZE_SMALL,
                 )
-                cursor_x += font.size(separator.upper())[0]
+                x += font.size(separator.upper())[0]
 
     def _render_stats_panel(
         self, surface: pygame.Surface, member: "PartyMember"
@@ -279,6 +285,9 @@ class PartyScene(Scene):
         pygame.draw.rect(
             surface, ColorSettings.GRAY, panel_rect, _STATS_PANEL_BORDER
         )
+        DebugOverlay.rect(
+            surface, panel_rect, "stats panel", DebugOverlay.COLOR_PANEL,
+        )
         # Member name as the panel header.
         text_renderer.draw_text(
             surface,
@@ -287,33 +296,11 @@ class PartyScene(Scene):
             color=ColorSettings.WHITE,
             size=FontSettings.SIZE_BODY,
         )
-        # Element pair below the name, using the same per-element accent
-        # tinting as the roster row so the player can confirm the panel
-        # is pointing at the highlighted member.
-        font_small = text_renderer.get_font(FontSettings.SIZE_SMALL)
-        cursor_x = _STATS_LABEL_X
-        separator = " + "
-        for i, element_id in enumerate(member.elements):
-            element_color = ColorSettings.ELEMENT_COLORS.get(
-                element_id, ColorSettings.WHITE
-            )
-            text_renderer.draw_text(
-                surface,
-                element_id,
-                (cursor_x, _STATS_ELEMENTS_Y),
-                color=element_color,
-                size=FontSettings.SIZE_SMALL,
-            )
-            cursor_x += font_small.size(element_id.upper())[0]
-            if i < len(member.elements) - 1:
-                text_renderer.draw_text(
-                    surface,
-                    separator,
-                    (cursor_x, _STATS_ELEMENTS_Y),
-                    color=ColorSettings.GRAY,
-                    size=FontSettings.SIZE_SMALL,
-                )
-                cursor_x += font_small.size(separator.upper())[0]
+        # Element pair below the name. Reuses the shared element-line
+        # helper so the styling stays in sync with the roster rows.
+        self._render_element_line(
+            surface, member.elements, (_STATS_LABEL_X, _STATS_ELEMENTS_Y),
+        )
         # Divider line under the header so the stat rows feel grouped.
         pygame.draw.line(
             surface,
