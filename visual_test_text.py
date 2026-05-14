@@ -1,16 +1,20 @@
-"""Visual test harness for Aku text-style alternatives.
+"""Visual test for element-line glow strategies.
 
-Standalone — run with ``python visual_test_text.py`` from the repo root.
-Renders the six elements in their current accent colors as a reference
-row, then a grid of Aku style variants (different fills + outlines +
-glows) drawn on three representative backgrounds (nero, pure black,
-overworld grass) so you can eyeball which combination reads best.
+Aku's style is settled (black fill + white halo); this revision shifts
+the focus to lifting the OTHER five elements so the screen doesn't read
+as "Aku is a god, everyone else is a placeholder."
 
-Press ESC or close the window to quit. F1 toggles a legend overlay
-that names each row's recipe.
+Top row: the settled Aku recipe alone, in a larger font, for reference.
 
-Nothing here is wired into the game; this file exists purely to pick a
-direction for Aku's text style.
+Grid below: the full in-game element pair line
+``AHI + WAI + LAU + MANA + RA + AKU`` rendered several ways, each on
+the three backgrounds the player will actually see it over (nero,
+pure black command panel, overworld grass). Aku is always rendered
+with its settled white halo regardless of approach -- the approaches
+only affect the other five.
+
+Run with ``python visual_test_text.py`` from the repo root.
+ESC quits, F1 toggles the row labels.
 """
 
 from __future__ import annotations
@@ -18,125 +22,125 @@ from __future__ import annotations
 import sys
 import pygame
 
-from settings import ColorSettings, FontSettings, ScreenSettings
+from settings import ColorSettings, FontSettings
 
 
 # ---------------------------------------------------------------------------
-# Outline / glow renderers
+# Renderer (kept in sync with ui/text_renderer._render_glow so what you see
+# here matches what the live game produces).
 # ---------------------------------------------------------------------------
 
-def render_outlined(
-    text: str,
-    font: pygame.font.Font,
-    fill: tuple[int, int, int],
-    outline: tuple[int, int, int],
-    thickness: int = 1,
-) -> pygame.Surface:
-    """Return ``text`` rendered in ``fill`` with a ``thickness`` outline.
-
-    Implementation: render the outline-colored text 8 times around the
-    center then blit the fill once on top. Antialiasing is off to keep
-    the pixel-font edges crisp, matching the game's render pipeline.
-    """
-    body = font.render(text, False, fill)
-    edge = font.render(text, False, outline)
-    w, h = body.get_size()
-    surf = pygame.Surface(
-        (w + 2 * thickness, h + 2 * thickness), pygame.SRCALPHA
-    )
-    for dx in range(-thickness, thickness + 1):
-        for dy in range(-thickness, thickness + 1):
-            if dx == 0 and dy == 0:
-                continue
-            surf.blit(edge, (dx + thickness, dy + thickness))
-    surf.blit(body, (thickness, thickness))
-    return surf
-
-
-def render_glow(
-    text: str,
-    font: pygame.font.Font,
-    fill: tuple[int, int, int],
-    glow: tuple[int, int, int],
-    radius: int = 3,
-    alpha: int = 110,
-) -> pygame.Surface:
-    """Return ``text`` with a soft halo in ``glow`` behind ``fill`` text.
-
-    Multi-offset technique: blit the glow color in a ring of offsets at
-    a low per-blit alpha so they accumulate into a soft cloud, then put
-    the sharp text on top.
-    """
+def _render_glow(text, font, fill, glow, radius, alpha):
     body = font.render(text, False, fill)
     halo = font.render(text, False, glow)
     halo.set_alpha(alpha)
     w, h = body.get_size()
     pad = radius + 1
     surf = pygame.Surface((w + 2 * pad, h + 2 * pad), pygame.SRCALPHA)
+    r_sq = radius * radius
     for dx in range(-radius, radius + 1):
         for dy in range(-radius, radius + 1):
-            # Skip the very center; we'll draw the sharp text there.
             if dx == 0 and dy == 0:
                 continue
-            # Soft falloff — corners of the box get pushed past the
-            # circular radius and dropped, keeping the halo round-ish.
-            if dx * dx + dy * dy > radius * radius:
+            if dx * dx + dy * dy > r_sq:
                 continue
             surf.blit(halo, (dx + pad, dy + pad))
     surf.blit(body, (pad, pad))
-    return surf
+    return surf, pad
+
+
+def render_with_kwargs(font, text, color, glow=None, glow_radius=3,
+                       glow_alpha=90):
+    """Render ``text`` using the same kwargs ``draw_text`` accepts.
+
+    Returns ``(surface, pad)``; pad is the symmetric overhang produced
+    by the halo (0 when there's no glow). The caller should blit at
+    ``(x - pad, y - pad)`` so the glyph body lines up with the natural
+    layout position regardless of whether a halo is present.
+    """
+    if glow is None:
+        return font.render(text, False, color), 0
+    return _render_glow(text, font, color, glow, glow_radius, glow_alpha)
 
 
 # ---------------------------------------------------------------------------
-# Variant catalogue
+# Element data
 # ---------------------------------------------------------------------------
 
-# Reference: pull the current Aku color so the "current" row matches
-# the live game exactly.
-CURRENT_AKU = ColorSettings.ELEMENT_COLORS["aku"]  # placeholder orange
+ELEMENTS = ("ahi", "wai", "lau", "mana", "ra", "aku")
+
+FILL = {
+    "ahi":  (255, 130, 130),
+    "wai":  (130, 180, 255),
+    "lau":  (130, 220, 130),
+    "mana": (200, 140, 240),
+    "ra":   (255, 220, 0),
+    "aku":  (0, 0, 0),
+}
+
+# Lighter variant of each element's fill -- used by the "brighter
+# self-color" approach so the halo extends past the body in a pale
+# version of the element's own hue (like the outer edge of a flame).
+BRIGHT_HALO = {
+    "ahi":  (255, 200, 200),  # coral / salmon-white
+    "wai":  (200, 220, 255),  # ice / sky-white
+    "lau":  (200, 250, 200),  # mint / leaf-white
+    "mana": (230, 200, 250),  # lavender-white
+    "ra":   (255, 250, 180),  # butter / sun-white
+}
+
+# Aku's settled recipe always overrides any approach. Mirrors the
+# entry in ``ColorSettings.ELEMENT_TEXT_STYLES``.
+SETTLED_AKU = {
+    "color": (0, 0, 0),
+    "glow": (255, 255, 255),
+    "glow_radius": 3,
+    "glow_alpha": 90,
+}
 
 
-def _solid(color):
-    """Variant factory: plain font.render with a single color."""
-    def _render(font, text):
-        return font.render(text, False, color)
-    return _render
+def _approach_flat(elem):
+    """Baseline -- no halo, just the accent fill."""
+    return {"color": FILL[elem]}
 
 
-def _outline(fill, edge, thickness=1):
-    def _render(font, text):
-        return render_outlined(font=font, text=text,
-                               fill=fill, outline=edge,
-                               thickness=thickness)
-    return _render
+def _approach_universal_white(elem):
+    """Apply Aku's exact recipe (white halo at r=3, a=90) to everyone."""
+    return {"color": FILL[elem], "glow": (255, 255, 255),
+            "glow_radius": 3, "glow_alpha": 90}
 
 
-def _glow(fill, halo, radius=3, alpha=110):
-    def _render(font, text):
-        return render_glow(font=font, text=text,
-                           fill=fill, glow=halo,
-                           radius=radius, alpha=alpha)
-    return _render
+def _approach_soft_white(elem):
+    """Toned-down universal white -- smaller radius, lower alpha."""
+    return {"color": FILL[elem], "glow": (255, 255, 255),
+            "glow_radius": 2, "glow_alpha": 70}
 
 
-# Each row in the grid is one styling recipe for the word "AKU".
-VARIANTS: list[tuple[str, callable]] = [
-    ("current: solid orange (255,150,50)",
-     _solid(CURRENT_AKU)),
-    ("black fill + white outline",
-     _outline(ColorSettings.BLACK, ColorSettings.WHITE)),
-    ("black fill + violet outline (90,60,130)",
-     _outline(ColorSettings.BLACK, (90, 60, 130))),
-    ("black fill + dim red outline (120,30,30)",
-     _outline(ColorSettings.BLACK, (120, 30, 30))),
-    ("black fill + gray outline (120,120,120)",
-     _outline(ColorSettings.BLACK, ColorSettings.GRAY)),
-    ("dark violet solid (40,20,55), no outline",
-     _solid((40, 20, 55))),
-    ("black fill + violet GLOW (r=3)",
-     _glow(ColorSettings.BLACK, (140, 90, 200), radius=3, alpha=90)),
-    ("very dark gray solid (50,50,55), no outline",
-     _solid((50, 50, 55))),
+def _approach_self_soft(elem):
+    """Each element blooms in its own color, gently."""
+    return {"color": FILL[elem], "glow": FILL[elem],
+            "glow_radius": 2, "glow_alpha": 60}
+
+
+def _approach_self_parity(elem):
+    """Each element blooms in its own color at the same intensity as Aku."""
+    return {"color": FILL[elem], "glow": FILL[elem],
+            "glow_radius": 3, "glow_alpha": 90}
+
+
+def _approach_brighter(elem):
+    """Halo is a lighter version of the body color -- 'flame edge' look."""
+    return {"color": FILL[elem], "glow": BRIGHT_HALO[elem],
+            "glow_radius": 2, "glow_alpha": 80}
+
+
+APPROACHES = [
+    ("flat (current state)",                            _approach_flat),
+    ("universal white glow  (Aku recipe r=3 a=90)",     _approach_universal_white),
+    ("universal soft white  (r=2 a=70)",                _approach_soft_white),
+    ("self-color soft       (own color r=2 a=60)",      _approach_self_soft),
+    ("self-color parity     (own color r=3 a=90)",      _approach_self_parity),
+    ("brighter self-color   (lighter halo r=2 a=80)",   _approach_brighter),
 ]
 
 
@@ -144,9 +148,11 @@ VARIANTS: list[tuple[str, callable]] = [
 # Layout
 # ---------------------------------------------------------------------------
 
-# Three test backgrounds. We render each Aku variant on all three so
-# you can see how it survives the worst-case contrast on every panel
-# the player will actually encounter in-game.
+# Larger than the game window because the previous 800x600 grid was
+# already tight; the new content needs more room.
+WIDTH = 1100
+HEIGHT = 650
+
 PANEL_LABELS = ("nero (30,30,30)", "black (0,0,0)", "grass (110,160,90)")
 PANEL_COLORS = (
     ColorSettings.NERO,
@@ -154,106 +160,156 @@ PANEL_COLORS = (
     ColorSettings.OVERWORLD_FLOOR,
 )
 
-TITLE = "AKU TEXT STYLE TEST  —  pick a row"
-ESC_HINT = "ESC to quit  —  F1 toggles row labels"
+LABEL_COL_W = 250
+PANEL_GAP = 6
+PANEL_COL_W = (WIDTH - LABEL_COL_W - 2 * PANEL_GAP) // 3
 
-WIDTH = ScreenSettings.WIDTH       # 800
-HEIGHT = ScreenSettings.HEIGHT     # 600
+TOP_TITLE_H = 28
+SHOWCASE_LABEL_H = 18
+SHOWCASE_ROW_H = 64
+GAP_H = 12
+GRID_HDR_H = 20
+PANEL_HDR_H = 18
+APPROACH_ROW_H = 60
 
-LABEL_COL_W = 260      # left "row label" column
-PANEL_GAP = 4
-PANEL_COL_W = (WIDTH - LABEL_COL_W - 2 * PANEL_GAP) // 3   # ~178
-ROW_H = 52
-HEADER_H = 80          # title + reference row
-PANEL_HDR_H = 18       # background-name strip above each panel column
-
-
-def _draw_reference_row(screen: pygame.Surface, font: pygame.font.Font,
-                        y: int) -> None:
-    """Draw all six element accent colors in one strip for context."""
-    pygame.draw.rect(screen, ColorSettings.NERO,
-                     (0, y, WIDTH, ROW_H))
-    label = font.render("ALL ELEMENTS (CURRENT)", False,
-                        ColorSettings.GRAY)
-    screen.blit(label, (12, y + 6))
-    x = 12
-    item_y = y + 24
-    for elem_id, color in ColorSettings.ELEMENT_COLORS.items():
-        glyph = font.render(elem_id.upper(), False, color)
-        screen.blit(glyph, (x, item_y))
-        x += glyph.get_width() + 18
+SEPARATOR = " + "
 
 
-def _draw_panel_headers(screen: pygame.Surface,
-                        font_small: pygame.font.Font, y: int) -> None:
-    """Label which column is which background."""
+def _wrap_label(font, label, max_width):
+    """Greedy two-line wrap so long approach labels fit the label column."""
+    words = label.split(" ")
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        cand = word if not current else f"{current} {word}"
+        if font.size(cand)[0] <= max_width:
+            current = cand
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines[:2]
+
+
+def _draw_element_line(surface, font, top_x, top_y, panel_w, panel_h,
+                       approach_fn):
+    """Draw 'AHI + WAI + LAU + MANA + RA + AKU' centered in the panel.
+
+    Aku always uses ``SETTLED_AKU``. Every other element gets
+    ``approach_fn(element_id)`` as its render kwargs. The line is
+    centered horizontally inside the panel using body widths only;
+    halo padding extends symmetrically and is not counted toward width.
+    """
+    sep_w = font.size(SEPARATOR.upper())[0]
+    total_w = 0
+    for i, elem in enumerate(ELEMENTS):
+        total_w += font.size(elem.upper())[0]
+        if i < len(ELEMENTS) - 1:
+            total_w += sep_w
+
+    x = top_x + max(0, (panel_w - total_w) // 2)
+    y = top_y + (panel_h - font.get_linesize()) // 2
+    for i, elem in enumerate(ELEMENTS):
+        kwargs = SETTLED_AKU if elem == "aku" else approach_fn(elem)
+        glyph, pad = render_with_kwargs(font, elem.upper(), **kwargs)
+        surface.blit(glyph, (x - pad, y - pad))
+        x += font.size(elem.upper())[0]
+        if i < len(ELEMENTS) - 1:
+            sep = font.render(SEPARATOR.upper(), False, ColorSettings.GRAY)
+            surface.blit(sep, (x, y))
+            x += sep_w
+
+
+def _draw_approach_row(surface, font_small, top_y, label, approach_fn,
+                       show_labels):
+    """One grid row: label column + element line on each of 3 backgrounds."""
+    if show_labels:
+        for i, line in enumerate(_wrap_label(font_small, label,
+                                             LABEL_COL_W - 12)):
+            txt = font_small.render(line, False, ColorSettings.WHITE)
+            surface.blit(txt, (8, top_y + 8 + i * 14))
+
+    x = LABEL_COL_W
+    for bg in PANEL_COLORS:
+        pygame.draw.rect(surface, bg,
+                         (x, top_y, PANEL_COL_W, APPROACH_ROW_H))
+        _draw_element_line(surface, font_small, x, top_y,
+                           PANEL_COL_W, APPROACH_ROW_H, approach_fn)
+        x += PANEL_COL_W + PANEL_GAP
+
+
+def _draw_panel_headers(surface, font_small, y):
+    """Label which column is which background, above the first grid row."""
     x = LABEL_COL_W
     for label in PANEL_LABELS:
-        text = font_small.render(label, False, ColorSettings.GRAY)
-        screen.blit(text, (x + 4, y + 2))
+        txt = font_small.render(label, False, ColorSettings.GRAY)
+        surface.blit(txt, (x + 4, y + 2))
         x += PANEL_COL_W + PANEL_GAP
 
 
-def _draw_variant_row(screen: pygame.Surface,
-                      font_body: pygame.font.Font,
-                      font_small: pygame.font.Font,
-                      y: int, label: str, recipe,
-                      show_labels: bool) -> None:
-    """Draw one row: text label + AKU rendered on each of three panels."""
-    if show_labels:
-        # Wrap long labels onto two lines manually so they stay inside
-        # the label column without us pulling in the renderer's wrap().
-        words = label.split(" ")
-        lines: list[str] = []
-        current = ""
-        for word in words:
-            cand = word if not current else f"{current} {word}"
-            if font_small.size(cand)[0] <= LABEL_COL_W - 16:
-                current = cand
-            else:
-                if current:
-                    lines.append(current)
-                current = word
-        if current:
-            lines.append(current)
-        for i, line in enumerate(lines[:2]):
-            txt = font_small.render(line, False, ColorSettings.WHITE)
-            screen.blit(txt, (8, y + 6 + i * 14))
+def _draw_showcase_aku(surface, font_body, font_small, top_y):
+    """Top reference row: the settled Aku alone on each background.
 
+    Rendered at SIZE_BODY (16pt) rather than the SIZE_SMALL the grid
+    below uses, so the reference reads as a clear anchor for what
+    "good" looks like before scanning the comparison rows.
+    """
+    txt = font_small.render(
+        "SETTLED AKU (reference) -- this is what we're matching",
+        False, ColorSettings.WHITE,
+    )
+    surface.blit(txt, (8, top_y))
+
+    y = top_y + SHOWCASE_LABEL_H
     x = LABEL_COL_W
-    for bg_color in PANEL_COLORS:
-        pygame.draw.rect(screen, bg_color, (x, y, PANEL_COL_W, ROW_H))
-        glyph = recipe(font_body, "AKU")
+    for bg in PANEL_COLORS:
+        pygame.draw.rect(surface, bg, (x, y, PANEL_COL_W, SHOWCASE_ROW_H))
+        glyph, pad = render_with_kwargs(font_body, "AKU", **SETTLED_AKU)
         gw, gh = glyph.get_size()
-        screen.blit(
+        surface.blit(
             glyph,
-            (x + (PANEL_COL_W - gw) // 2, y + (ROW_H - gh) // 2),
+            (x + (PANEL_COL_W - gw) // 2,
+             y + (SHOWCASE_ROW_H - gh) // 2),
         )
         x += PANEL_COL_W + PANEL_GAP
 
 
-def _draw_frame(screen: pygame.Surface,
-                font_body: pygame.font.Font,
-                font_small: pygame.font.Font,
-                show_labels: bool) -> None:
-    screen.fill(ColorSettings.NERO)
+def _draw_frame(surface, font_body, font_small, show_labels):
+    surface.fill(ColorSettings.NERO)
 
     # Title strip.
-    title = font_small.render(TITLE, False, ColorSettings.WHITE)
-    screen.blit(title, (12, 8))
-    hint = font_small.render(ESC_HINT, False, ColorSettings.GRAY)
-    screen.blit(hint, (WIDTH - hint.get_width() - 12, 8))
+    title = font_small.render(
+        "ELEMENT GLOW TEST  --  pick a row",
+        False, ColorSettings.WHITE,
+    )
+    surface.blit(title, (12, 6))
+    hint = font_small.render(
+        "ESC quits  --  F1 toggles row labels",
+        False, ColorSettings.GRAY,
+    )
+    surface.blit(hint, (WIDTH - hint.get_width() - 12, 6))
 
-    _draw_reference_row(screen, font_small, y=28)
-    _draw_panel_headers(screen, font_small, y=HEADER_H)
+    # Top reference: settled Aku, alone, on each background.
+    showcase_y = TOP_TITLE_H
+    _draw_showcase_aku(surface, font_body, font_small, showcase_y)
 
-    y = HEADER_H + PANEL_HDR_H
-    for label, recipe in VARIANTS:
-        _draw_variant_row(
-            screen, font_body, font_small, y,
-            label, recipe, show_labels,
-        )
-        y += ROW_H + PANEL_GAP
+    # Section header for the comparison grid.
+    grid_y = showcase_y + SHOWCASE_LABEL_H + SHOWCASE_ROW_H + GAP_H
+    section_label = font_small.render(
+        "Approaches for the other five (Aku stays on the settled white)",
+        False, ColorSettings.WHITE,
+    )
+    surface.blit(section_label, (8, grid_y))
+    _draw_panel_headers(surface, font_small, grid_y + GRID_HDR_H)
+
+    # One row per approach.
+    row_y = grid_y + GRID_HDR_H + PANEL_HDR_H
+    for label, fn in APPROACHES:
+        _draw_approach_row(surface, font_small, row_y, label, fn,
+                           show_labels)
+        row_y += APPROACH_ROW_H + PANEL_GAP
 
 
 # ---------------------------------------------------------------------------
@@ -262,10 +318,8 @@ def _draw_frame(screen: pygame.Surface,
 
 def main() -> int:
     pygame.init()
-    screen = pygame.display.set_mode(
-        ScreenSettings.RESOLUTION, pygame.SCALED
-    )
-    pygame.display.set_caption("Aku text style visual test")
+    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED)
+    pygame.display.set_caption("Element glow visual test")
     clock = pygame.time.Clock()
 
     font_body = pygame.font.Font(FontSettings.FONT, FontSettings.SIZE_BODY)
@@ -282,7 +336,6 @@ def main() -> int:
                     running = False
                 elif event.key == pygame.K_F1:
                     show_labels = not show_labels
-
         _draw_frame(screen, font_body, font_small, show_labels)
         pygame.display.flip()
         clock.tick(60)
