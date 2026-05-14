@@ -35,6 +35,12 @@ class MenuItem:
     # render gray so the "you can't pick this" affordance survives.
     # Used to tint ability rows by their element.
     color: tuple[int, int, int] | None = None
+    # Optional halo for the row's label, paired with ``color``. Used by
+    # Aku-element abilities so the lore-black body stays visible on the
+    # black command panel. ``None`` skips the glow render path entirely.
+    glow: tuple[int, int, int] | None = None
+    glow_radius: int = 3
+    glow_alpha: int = 90
 
 
 class Menu:
@@ -121,13 +127,18 @@ class Menu:
             # Disabled rows always render gray so the player can tell
             # they're locked out. Enabled rows use the row's own
             # ``color`` override (e.g. an ability's element accent)
-            # when set, falling back to plain white.
+            # when set, falling back to plain white. Disabled rows
+            # always skip the glow path too — a halo on a "locked"
+            # row would over-sell its availability.
             if not item.enabled:
                 color = ColorSettings.GRAY
+                glow = None
             elif item.color is not None:
                 color = item.color
+                glow = item.glow
             else:
                 color = ColorSettings.WHITE
+                glow = None
             row_y = y + index * line_height
             text_x = x
             if centered:
@@ -142,7 +153,10 @@ class Menu:
                     size=size,
                 )
             text_renderer.draw_text(
-                surface, item.label, (text_x, row_y), color, size=size
+                surface, item.label, (text_x, row_y), color, size=size,
+                glow=glow,
+                glow_radius=item.glow_radius,
+                glow_alpha=item.glow_alpha,
             )
 
     # ------------------------------------------------------------------

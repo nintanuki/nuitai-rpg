@@ -167,15 +167,18 @@ class BattleScene(Scene):
         items: list[MenuItem] = []
         for a in abilities:
             element_id = a.get("element")
-            color = (
-                ColorSettings.ELEMENT_COLORS.get(element_id)
-                if element_id else None
+            style = (
+                ColorSettings.ELEMENT_TEXT_STYLES.get(element_id, {})
+                if element_id else {}
             )
             items.append(
                 MenuItem(
                     a.get("name", a.get("id", "?")),
                     lambda ability_id=a["id"]: self._on_ability_chosen(ability_id),
-                    color=color,
+                    color=style.get("color"),
+                    glow=style.get("glow"),
+                    glow_radius=style.get("glow_radius", 3),
+                    glow_alpha=style.get("glow_alpha", 90),
                 )
             )
         if not items:
@@ -492,12 +495,13 @@ class BattleScene(Scene):
         x, y = pos
         separator = " + "
         for i, element_id in enumerate(element_ids):
-            color = ColorSettings.ELEMENT_COLORS.get(
-                element_id, ColorSettings.WHITE
+            style = ColorSettings.ELEMENT_TEXT_STYLES.get(
+                element_id, {"color": ColorSettings.WHITE}
             )
             text_renderer.draw_text(
                 surface, element_id, (x, y),
-                color=color, size=FontSettings.SIZE_SMALL,
+                size=FontSettings.SIZE_SMALL,
+                **style,
             )
             x += font.size(element_id.upper())[0]
             if i < len(element_ids) - 1:

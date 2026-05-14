@@ -26,17 +26,41 @@ class ColorSettings:
 
     # Per-element accent colors. Used by menus / UI labels to flag the
     # affinity of an ability or item at a glance. Tuned for readability
-    # on the black command-panel background — Ahi and Wai are *lighter*
-    # than the pure RED/BLUE constants above; Aku ships as a placeholder
-    # orange because the lore color (black) would disappear against the
-    # panel background.
+    # on the black command-panel background -- Ahi and Wai are *lighter*
+    # than the pure RED/BLUE constants above. Aku's entry is the lore
+    # color (black); rendering it readably is the job of
+    # ``ELEMENT_TEXT_STYLES`` below, which pairs the black body with a
+    # white halo so the glyph survives any backdrop.
     ELEMENT_COLORS: dict = {
         "ahi":  (255, 130, 130),  # light red
         "wai":  (130, 180, 255),  # light blue
         "lau":  (130, 220, 130),  # green
         "mana": (200, 140, 240),  # light purple
         "ra":   (255, 220, 0),    # yellow (matches the menu cursor for now)
-        "aku":  (255, 150, 50),   # placeholder orange
+        "aku":  (0, 0, 0),        # shadow black -- paired with white glow
+    }
+
+    # Per-element TEXT style. Anywhere the UI renders an element name
+    # (element-pair lines on combatant cards, ability-row labels in the
+    # battle command menu) reads its render kwargs from here and splats
+    # them into ``text_renderer.draw_text``. Most elements just carry
+    # their accent color; Aku adds a white glow so the lore-black body
+    # stays readable on the black command panel and other dark scenes.
+    # Keys mirror ``ELEMENT_COLORS``; ``color`` and ``glow`` map directly
+    # to ``draw_text`` parameters, optional ``glow_radius`` / ``glow_alpha``
+    # tune the halo softness.
+    ELEMENT_TEXT_STYLES: dict = {
+        "ahi":  {"color": (255, 130, 130)},
+        "wai":  {"color": (130, 180, 255)},
+        "lau":  {"color": (130, 220, 130)},
+        "mana": {"color": (200, 140, 240)},
+        "ra":   {"color": (255, 220, 0)},
+        "aku":  {
+            "color": (0, 0, 0),
+            "glow": (255, 255, 255),
+            "glow_radius": 3,
+            "glow_alpha": 90,
+        },
     }
 
 
@@ -210,7 +234,7 @@ class UISettings:
     # (``_ROSTER_ROW_HEIGHT - PORTRAIT_SIZE`` on a 60px row = 16px).
     # ``PORTRAIT_Y_OFFSET`` nudges the portrait down a few pixels so the
     # top of the sprite lines up with the top of the glyphs in the name
-    # beside it — the Pixeled font has several pixels of internal leading
+    # beside it -- the Pixeled font has several pixels of internal leading
     # above its caps, so a portrait blitted at the raw row top sits
     # visibly higher than the text.
     PORTRAIT_SIZE = 44
@@ -261,7 +285,7 @@ class OverworldSettings:
     One cell is a fixed grid of tiles that fills the visible action
     window. Crossing the edge swaps to the matching neighbor cell in
     ``WORLD_LAYOUT`` and snaps the sprite to its entry tile. Screen-
-    locked — no scrolling camera at this layer.
+    locked -- no scrolling camera at this layer.
     """
 
     COLS = 20  # Tiles wide per cell.
