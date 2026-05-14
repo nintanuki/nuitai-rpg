@@ -43,24 +43,34 @@ class ColorSettings:
     # Per-element TEXT style. Anywhere the UI renders an element name
     # (element-pair lines on combatant cards, ability-row labels in the
     # battle command menu) reads its render kwargs from here and splats
-    # them into ``text_renderer.draw_text``. Most elements just carry
-    # their accent color; Aku adds a white glow so the lore-black body
-    # stays readable on the black command panel and other dark scenes.
-    # Keys mirror ``ELEMENT_COLORS``; ``color`` and ``glow`` map directly
-    # to ``draw_text`` parameters, optional ``glow_radius`` / ``glow_alpha``
-    # tune the halo softness.
+    # them into ``text_renderer.draw_text``.
+    #
+    # SHIPPED RECIPE: every element gets the same white halo at radius
+    # 3, alpha 90 -- the same recipe Aku originally needed so its lore-
+    # black body would survive a dark background. Applying it to all
+    # six keeps the screen visually balanced; without the halo the
+    # other five read flat next to a halo'd Aku. Aku's body stays
+    # black; everyone else keeps their accent fill.
+    #
+    # Alternatives we considered (preserved as runnable recipes in
+    # ``visual_test_text.py``):
+    #   universal soft white: glow=WHITE,  r=2, a=70  (toned down)
+    #   self-color soft:      glow=fill,   r=2, a=60  (own-color bloom)
+    #   self-color parity:    glow=fill,   r=3, a=90  (own-color at Aku intensity)
+    #   brighter self-color:  glow=lighter, r=2, a=80 ("flame edge" -- per-element lighter halo)
+    # Re-run ``python visual_test_text.py`` to compare again.
+    _TEXT_HALO_WHITE = {
+        "glow": (255, 255, 255),
+        "glow_radius": 3,
+        "glow_alpha": 90,
+    }
     ELEMENT_TEXT_STYLES: dict = {
-        "ahi":  {"color": (255, 130, 130)},
-        "wai":  {"color": (130, 180, 255)},
-        "lau":  {"color": (130, 220, 130)},
-        "mana": {"color": (200, 140, 240)},
-        "ra":   {"color": (255, 220, 0)},
-        "aku":  {
-            "color": (0, 0, 0),
-            "glow": (255, 255, 255),
-            "glow_radius": 3,
-            "glow_alpha": 90,
-        },
+        "ahi":  {"color": (255, 130, 130), **_TEXT_HALO_WHITE},
+        "wai":  {"color": (130, 180, 255), **_TEXT_HALO_WHITE},
+        "lau":  {"color": (130, 220, 130), **_TEXT_HALO_WHITE},
+        "mana": {"color": (200, 140, 240), **_TEXT_HALO_WHITE},
+        "ra":   {"color": (255, 220, 0),   **_TEXT_HALO_WHITE},
+        "aku":  {"color": (0, 0, 0),       **_TEXT_HALO_WHITE},
     }
 
 

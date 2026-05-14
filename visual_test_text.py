@@ -8,13 +8,16 @@ Top row: the settled Aku recipe alone, in a larger font, for reference.
 
 Grid below: the full in-game element pair line
 ``AHI + WAI + LAU + MANA + RA + AKU`` rendered several ways, each on
-the three backgrounds the player will actually see it over (nero,
-pure black command panel, overworld grass). Aku is always rendered
-with its settled white halo regardless of approach -- the approaches
-only affect the other five.
+the two in-game backgrounds the player will actually see it over
+(nero -- 99% of scenes -- and pure black for the command panel and
+overlays). Aku is always rendered with its settled white halo
+regardless of approach; the approaches only affect the other five.
+
+All six approach recipes stay defined in this file even after one of
+them ships, so the comparison can be re-run later if we want to retune.
 
 Run with ``python visual_test_text.py`` from the repo root.
-ESC quits, F1 toggles the row labels.
+ESC quits, F11 toggles fullscreen, F1 toggles the row labels.
 """
 
 from __future__ import annotations
@@ -105,7 +108,11 @@ def _approach_flat(elem):
 
 
 def _approach_universal_white(elem):
-    """Apply Aku's exact recipe (white halo at r=3, a=90) to everyone."""
+    """Apply Aku's exact recipe (white halo at r=3, a=90) to everyone.
+
+    THIS IS THE SHIPPED RECIPE. Kept in this file alongside the other
+    approaches so we can re-run the comparison if we ever want to retune.
+    """
     return {"color": FILL[elem], "glow": (255, 255, 255),
             "glow_radius": 3, "glow_alpha": 90}
 
@@ -136,7 +143,8 @@ def _approach_brighter(elem):
 
 APPROACHES = [
     ("flat (current state)",                            _approach_flat),
-    ("universal white glow  (Aku recipe r=3 a=90)",     _approach_universal_white),
+    ("universal white glow  (Aku recipe r=3 a=90) ** SHIPPED **",
+                                                        _approach_universal_white),
     ("universal soft white  (r=2 a=70)",                _approach_soft_white),
     ("self-color soft       (own color r=2 a=60)",      _approach_self_soft),
     ("self-color parity     (own color r=3 a=90)",      _approach_self_parity),
@@ -148,29 +156,32 @@ APPROACHES = [
 # Layout
 # ---------------------------------------------------------------------------
 
-# Larger than the game window because the previous 800x600 grid was
-# already tight; the new content needs more room.
+# Two background columns (down from three) gives each panel almost
+# 2x the width, which is what lets the element line render at
+# SIZE_BODY without clipping. Grass dropped because the in-game
+# element label only ever lands over nero or pure black.
 WIDTH = 1100
 HEIGHT = 650
 
-PANEL_LABELS = ("nero (30,30,30)", "black (0,0,0)", "grass (110,160,90)")
+PANEL_LABELS = ("nero (30,30,30) -- typical scene bg",
+                "black (0,0,0) -- command panel / overlay")
 PANEL_COLORS = (
     ColorSettings.NERO,
     ColorSettings.BLACK,
-    ColorSettings.OVERWORLD_FLOOR,
 )
+PANEL_COUNT = len(PANEL_COLORS)
 
 LABEL_COL_W = 250
-PANEL_GAP = 6
-PANEL_COL_W = (WIDTH - LABEL_COL_W - 2 * PANEL_GAP) // 3
+PANEL_GAP = 8
+PANEL_COL_W = (WIDTH - LABEL_COL_W - (PANEL_COUNT - 1) * PANEL_GAP) // PANEL_COUNT
 
 TOP_TITLE_H = 28
 SHOWCASE_LABEL_H = 18
-SHOWCASE_ROW_H = 64
+SHOWCASE_ROW_H = 72
 GAP_H = 12
 GRID_HDR_H = 20
 PANEL_HDR_H = 18
-APPROACH_ROW_H = 60
+APPROACH_ROW_H = 64
 
 SEPARATOR = " + "
 
@@ -222,20 +233,23 @@ def _draw_element_line(surface, font, top_x, top_y, panel_w, panel_h,
             x += sep_w
 
 
-def _draw_approach_row(surface, font_small, top_y, label, approach_fn,
-                       show_labels):
-    """One grid row: label column + element line on each of 3 backgrounds."""
+def _draw_approach_row(surface, font_body, font_small, top_y, label,
+                       approach_fn, show_labels):
+    """One grid row: label column + element line on each background."""
     if show_labels:
         for i, line in enumerate(_wrap_label(font_small, label,
                                              LABEL_COL_W - 12)):
             txt = font_small.render(line, False, ColorSettings.WHITE)
-            surface.blit(txt, (8, top_y + 8 + i * 14))
+            surface.blit(txt, (8, top_y + 10 + i * 14))
 
     x = LABEL_COL_W
     for bg in PANEL_COLORS:
         pygame.draw.rect(surface, bg,
                          (x, top_y, PANEL_COL_W, APPROACH_ROW_H))
-        _draw_element_line(surface, font_small, x, top_y,
+        # Element line renders at SIZE_BODY so the comparison reads
+        # clearly even on a small monitor. The live game uses SIZE_SMALL
+        # for these labels; resizing won't change which recipe wins.
+        _draw_element_line(surface, font_body, x, top_y,
                            PANEL_COL_W, APPROACH_ROW_H, approach_fn)
         x += PANEL_COL_W + PANEL_GAP
 
@@ -252,9 +266,9 @@ def _draw_panel_headers(surface, font_small, y):
 def _draw_showcase_aku(surface, font_body, font_small, top_y):
     """Top reference row: the settled Aku alone on each background.
 
-    Rendered at SIZE_BODY (16pt) rather than the SIZE_SMALL the grid
-    below uses, so the reference reads as a clear anchor for what
-    "good" looks like before scanning the comparison rows.
+    Rendered at SIZE_BODY (16pt). The grid below uses the same size so
+    the comparison reads at the same scale, but the showcase keeps a
+    distinct background-header strip to anchor the eye.
     """
     txt = font_small.render(
         "SETTLED AKU (reference) -- this is what we're matching",
@@ -286,7 +300,7 @@ def _draw_frame(surface, font_body, font_small, show_labels):
     )
     surface.blit(title, (12, 6))
     hint = font_small.render(
-        "ESC quits  --  F1 toggles row labels",
+        "ESC quits  --  F11 fullscreen  --  F1 toggles row labels",
         False, ColorSettings.GRAY,
     )
     surface.blit(hint, (WIDTH - hint.get_width() - 12, 6))
@@ -307,7 +321,7 @@ def _draw_frame(surface, font_body, font_small, show_labels):
     # One row per approach.
     row_y = grid_y + GRID_HDR_H + PANEL_HDR_H
     for label, fn in APPROACHES:
-        _draw_approach_row(surface, font_small, row_y, label, fn,
+        _draw_approach_row(surface, font_body, font_small, row_y, label, fn,
                            show_labels)
         row_y += APPROACH_ROW_H + PANEL_GAP
 
@@ -334,6 +348,8 @@ def main() -> int:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+                elif event.key == pygame.K_F11:
+                    pygame.display.toggle_fullscreen()
                 elif event.key == pygame.K_F1:
                     show_labels = not show_labels
         _draw_frame(screen, font_body, font_small, show_labels)
