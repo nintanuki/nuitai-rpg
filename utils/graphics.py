@@ -60,6 +60,52 @@ def load_portrait(member_id: str) -> pygame.Surface:
     return surface
 
 
+# Cache of loaded element-icon surfaces keyed by element id.
+# Each entry stores a Surface when the file was found, or ``None`` when
+# the lookup confirmed there is no art for that element yet. Caching the
+# negative result avoids re-stat'ing the filesystem on every frame for
+# elements like ``lau`` / ``mana`` / ``ra`` / ``aku`` that don't have
+# icons drawn yet.
+_ELEMENT_ICON_CACHE: dict[str, pygame.Surface | None] = {}
+
+
+def load_element_icon(element_id: str) -> pygame.Surface | None:
+    """Return the affinity icon surface for ``element_id``, or ``None``.
+
+    Looks up ``assets/graphics/icons/<element_id>.png``. If the file is
+    missing the function returns ``None`` so callers can decide to fall
+    back to the element word -- this keeps UI rendering tolerant of
+    partial icon coverage while art for the remaining elements is in
+    progress.
+
+    Surfaces are cached (including the ``None`` outcome) so callers
+    can invoke this in their render path without paying repeated disk
+    or filesystem cost.
+
+    Args:
+        element_id: A lowercase element id, e.g. ``"ahi"`` or ``"wai"``.
+
+    Returns:
+        The icon ``pygame.Surface`` if the file exists, otherwise
+        ``None``. The returned surface is shared -- callers must not
+        mutate it.
+    """
+    if element_id in _ELEMENT_ICON_CACHE:
+        return _ELEMENT_ICON_CACHE[element_id]
+    candidate = os.path.join(AssetPaths.ICONS_DIR, f"{element_id}.png")
+    if not os.path.exists(candidate):
+        _ELEMENT_ICON_CACHE[element_id] = None
+        return None
+    surface = pygame.image.load(candidate)
+    # ``convert_alpha`` needs an active display; callers run inside scene
+    # render methods so the display is always up by then. Headless smoke
+    # tests fall back to the unconverted surface, same as load_portrait.
+    if pygame.display.get_surface() is not None:
+        surface = surface.convert_alpha()
+    _ELEMENT_ICON_CACHE[element_id] = surface
+    return surface
+
+
 def build_gradient_surface(
     width: int,
     height: int,

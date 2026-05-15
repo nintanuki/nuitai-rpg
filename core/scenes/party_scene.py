@@ -26,11 +26,11 @@ if __package__ is None or __package__ == "":
 import pygame
 
 from core.scene import Scene
-from settings import ColorSettings, FontSettings, ScreenSettings
+from settings import ColorSettings, FontSettings, ScreenSettings, UISettings
 from ui import input_map, text_renderer
 from ui.layout import DebugOverlay, RosterRowLayout
 from utils.backgrounds import render_scene_background
-from utils.graphics import load_portrait
+from utils.graphics import load_element_icon, load_portrait
 
 if TYPE_CHECKING:
     from main import GameManager
@@ -39,17 +39,17 @@ if TYPE_CHECKING:
 
 _HEADING_POSITION = (40, 40)
 _ROSTER_TOP_Y = 120
-_ROSTER_ROW_HEIGHT = 60
+# Row pitch has to clear the SIZE_BODY name line plus a SIZE_SMALL /
+# 16px icon line plus visual breathing room. 60 was tight for two text
+# lines; 76 was too generous (icons floated low in the row, well below
+# the portrait bottom). 64 keeps the name+icon block compact while
+# still leaving 12 px between the icon's bottom and the next row.
+_ROSTER_ROW_HEIGHT = 64
 # Roster column anchored at the same X as the heading so the cursor
 # triangle, portraits, and bottom prompt all read as a single left-aligned
 # stack with the "PARTY" title above them.
 _ROSTER_LEFT_X = 40
 _PROMPT_BOTTOM_MARGIN = 30
-# NOTE: Per-row layout (portrait rect, name pos, element pos, cursor
-# triangle) used to live as raw arithmetic in ``_render_member``. It now
-# lives in ``ui.layout.RosterRowLayout`` -- one anchor (left_x, top_y)
-# in, all derived positions out via Rect properties. If you want to
-# adjust how a row is composed, edit RosterRowLayout, not this scene.
 
 # Stats panel layout (right column). The panel mirrors the area the
 # player sees as the empty space to the right of the roster -- it shows
@@ -61,16 +61,21 @@ _STATS_PANEL_HEIGHT = 440
 _STATS_PANEL_BORDER = 2
 _STATS_LABEL_X = _STATS_PANEL_LEFT_X + 20
 _STATS_VALUE_X = _STATS_PANEL_LEFT_X + 220
+# Stats-panel vertical rhythm. The header (member name) sits 16 px
+# inside the panel; the element line lives below it; the divider line
+# closes the header block off from the stat table. Original spacing was
+# 28 px name->elements and 28 px elements->divider, which was sized
+# for SIZE_SMALL text. The element line now renders 16x16 icons
+# alongside SIZE_SMALL words (icon-plus-word) and was visually merging
+# both with the name above and with the divider below. 40 px gaps give
+# the icon clear breathing room top and bottom.
 _STATS_HEADER_Y = _STATS_PANEL_TOP_Y + 16
-_STATS_ELEMENTS_Y = _STATS_PANEL_TOP_Y + 44
-_STATS_DIVIDER_Y = _STATS_PANEL_TOP_Y + 72
+_STATS_ELEMENTS_Y = _STATS_PANEL_TOP_Y + 56
+_STATS_DIVIDER_Y = _STATS_PANEL_TOP_Y + 96
 _STATS_ROW_TOP_Y = _STATS_DIVIDER_Y + 16
 _STATS_ROW_HEIGHT = 28
 
-# Stat rows displayed on the right panel. Each tuple is
-# ``(stats_key, display_label)``. ``hp`` is special-cased in
-# ``_render_stats_panel`` to show ``current / max`` instead of a single
-# number; everything else reads straight out of ``member.stats``.
+# Stat rows displayed on the right panel.
 _STAT_ROWS: tuple[tuple[str, str], ...] = (
     ("level", "Level"),
     ("hp", "HP"),
@@ -82,9 +87,6 @@ _STAT_ROWS: tuple[tuple[str, str], ...] = (
     ("luck", "Luck"),
 )
 
-# Cursor triangle drawn left of the currently-highlighted roster row.
-# Same accent color as the menu cursor elsewhere in the UI so the
-# selection feels consistent across screens.
 _CURSOR_COLOR = ColorSettings.YELLOW
 
 
@@ -94,20 +96,8 @@ class PartyScene(Scene):
     OPAQUE = True
 
     def __init__(self, gm: "GameManager") -> None:
-        """Bind this scene to the host game manager.
-
-        Args:
-            gm: The host game manager. ``gm.party`` is the data source.
-        """
         super().__init__(gm)
-        # Which roster row the cursor is on. Persists for the lifetime
-        # of the scene; reset to 0 every time the screen is reopened
-        # because the scene is freshly constructed by ``MenuScene``.
         self._cursor: int = 0
-
-    # ------------------------------------------------------------------
-    # FRAME
-    # ------------------------------------------------------------------
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """Up/down moves the selector; cancel pops back to the menu."""
@@ -126,7 +116,6 @@ class PartyScene(Scene):
             self.gm.audio.play("menu_move")
 
     def render(self, surface: pygame.Surface) -> None:
-        """Paint heading + roster rows + the selected member's stat panel."""
         render_scene_background(self, surface)
         text_renderer.draw_text(
             surface,
@@ -137,13 +126,9 @@ class PartyScene(Scene):
         )
         for index, member in enumerate(self.gm.party.members):
             self._render_member(surface, member, index)
-        # Stats panel for the currently-highlighted member. Skipped if
-        # the party is empty so the screen still renders cleanly during
-        # bring-up or after a hypothetical full-wipe.
         if self.gm.party.members:
             selected = self.gm.party.members[self._cursor]
             self._render_stats_panel(surface, selected)
-        # Bottom-of-screen hint so the player knows what to press.
         text_renderer.draw_text(
             surface,
             "Up/Down: switch    Cancel: return",
@@ -151,10 +136,6 @@ class PartyScene(Scene):
             color=ColorSettings.GRAY,
             size=FontSettings.SIZE_SMALL,
         )
-
-    # ------------------------------------------------------------------
-    # INTERNAL HELPERS
-    # ------------------------------------------------------------------
 
     def _render_member(
         self, surface: pygame.Surface, member: "PartyMember", index: int
@@ -177,37 +158,53 @@ class PartyScene(Scene):
             surface, portrait_rect, "portrait", DebugOverlay.COLOR_PORTRAIT,
         )
 
-        hp_color = (
+        # HP has moved to the stats panel; the left column is purely
+        # identity (name + element icons). Dead members still flash red
+        # so a wipe is visible at a glance.
+        name_color = (
             ColorSettings.RED if member.current_hp <= 0 else ColorSettings.WHITE
         )
         text_renderer.draw_text(
             surface,
-            f"{member.name}    HP {member.current_hp} / {member.max_hp}",
+            member.name,
             layout.name_pos,
-            color=hp_color,
+            color=name_color,
             size=FontSettings.SIZE_BODY,
         )
         DebugOverlay.point(
             surface, layout.name_pos, "name", DebugOverlay.COLOR_TEXT,
         )
-
         DebugOverlay.point(
             surface, layout.element_pos, "elements", DebugOverlay.COLOR_TEXT,
         )
-        self._render_element_line(surface, member.elements, layout.element_pos)
+        # Roster element row: icons only (no word) when an icon exists.
+        # Stats panel is the place where icons sit *next to* words.
+        self._render_element_line(
+            surface, member.elements, layout.element_pos, show_word=False,
+        )
 
     def _render_element_line(
         self,
         surface: pygame.Surface,
         element_ids: tuple,
         pos: tuple[int, int],
+        *,
+        show_word: bool = True,
     ) -> None:
         """Draw a multi-color element-pair line starting at ``pos``.
 
-        Each element id is rendered with kwargs from
-        ``ColorSettings.ELEMENT_TEXT_STYLES`` and separated by gray " + ".
-        Aku entries carry a white glow so the lore-black body stays
-        readable against every background this screen lives over.
+        For each element id the renderer prefers the per-element icon
+        from ``assets/graphics/icons/<id>.png`` (loaded lazily by
+        ``utils.graphics.load_element_icon``). When an icon exists and
+        ``show_word`` is False, only the icon is drawn (used by the
+        roster on the left of the party screen and by the battle
+        roster). When ``show_word`` is True the word is drawn directly
+        after the icon (used by the stats panel on the right). Elements
+        without an icon yet fall back to the word so partial icon
+        coverage degrades gracefully.
+
+        Entries are separated by a gray " + " so the player can tell at
+        a glance that a member has more than one affinity.
         """
         font = text_renderer.get_font(FontSettings.SIZE_SMALL)
         x, y = pos
@@ -216,12 +213,27 @@ class PartyScene(Scene):
             style = ColorSettings.ELEMENT_TEXT_STYLES.get(
                 element_id, {"color": ColorSettings.WHITE}
             )
-            text_renderer.draw_text(
-                surface, element_id, (x, y),
-                size=FontSettings.SIZE_SMALL,
-                **style,
-            )
-            x += font.size(element_id.upper())[0]
+            icon = load_element_icon(element_id)
+            if icon is not None:
+                surface.blit(
+                    icon, (x, y + UISettings.ELEMENT_ICON_Y_OFFSET)
+                )
+                x += UISettings.ELEMENT_ICON_SIZE
+                if show_word:
+                    x += UISettings.ELEMENT_ICON_WORD_GAP
+                    text_renderer.draw_text(
+                        surface, element_id, (x, y),
+                        size=FontSettings.SIZE_SMALL,
+                        **style,
+                    )
+                    x += font.size(element_id.upper())[0]
+            else:
+                text_renderer.draw_text(
+                    surface, element_id, (x, y),
+                    size=FontSettings.SIZE_SMALL,
+                    **style,
+                )
+                x += font.size(element_id.upper())[0]
             if i < len(element_ids) - 1:
                 text_renderer.draw_text(
                     surface, separator, (x, y),

@@ -206,6 +206,14 @@ class AssetPaths:
         os.path.dirname(__file__),
         'assets', 'graphics', 'portraits', 'unknown_portrait.png',
     )
+    # Per-element 16x16 affinity icons (e.g. a flame for ``ahi``, a wave
+    # for ``wai``) used by the roster element lines on the party screen
+    # and in battle. Files are named ``<element_id>.png`` -- if a file
+    # for a given element does not exist, the renderer falls back to the
+    # element word so partial coverage is fine while art lands.
+    ICONS_DIR = os.path.join(
+        os.path.dirname(__file__), 'assets', 'graphics', 'icons'
+    )
 
 
 class DebugSettings:
@@ -251,13 +259,48 @@ class UISettings:
     PORTRAIT_GAP = 16
     PORTRAIT_Y_OFFSET = 12
     # Vertical gap between the top of the name line and the top of the
-    # element line. The old "44 = portrait bottom" math assumed the
-    # font's visible glyph height matched its point size, but Pixeled
-    # has several pixels of internal leading top and bottom, so 44 left
-    # the element line drifting below the portrait. 32 keeps name and
-    # element as a tight two-line block that fits within the portrait's
-    # vertical span.
-    ROSTER_ELEMENT_LINE_Y_OFFSET = 32
+    # element line. The original 32 px gap was sized for SIZE_SMALL
+    # text only; swapping words for 16x16 element icons made the line
+    # taller, so 32 visually merged with the name above it. 46 over-
+    # corrected the other way -- the icons sat below the portrait's
+    # bottom edge and read as "dropped under the row". 36 sits the
+    # icon comfortably below the name's descender while keeping the
+    # icon's vertical span inside the portrait's so the two-line block
+    # still reads as a unit.
+    ROSTER_ELEMENT_LINE_Y_OFFSET = 36
+
+    # Per-element affinity icons drawn next to (or in place of) element
+    # words on roster lines and the stats panel. Icons are square PNGs
+    # sized to ``ELEMENT_ICON_SIZE`` on each side. ``ELEMENT_ICON_GAP``
+    # is the horizontal pixel padding between icons (and between an
+    # icon and a sibling element entry); ``ELEMENT_ICON_WORD_GAP`` is
+    # the inset between an icon and its trailing word when the stats
+    # panel renders both side by side.
+    #
+    # ``ELEMENT_ICON_Y_OFFSET`` is the vertical nudge for icons that
+    # sit on the SIZE_SMALL element line (roster rows, stats panel
+    # element pair). The line's anchor Y is the top of the SIZE_SMALL
+    # text. The Pixeled font has substantial top leading -- the visible
+    # glyphs (e.g. "AHI", "WAI") render roughly 8 pixels below ``pos.y``,
+    # so an icon blitted at ``pos.y`` with no offset visibly sits above
+    # the word it's meant to be paired with. The previous "0" guess was
+    # tuned by intuition rather than measurement and the result was that
+    # icons floated above the element words on the stats panel and
+    # above the second-line baseline on the party roster. An 8-pixel
+    # nudge brings the icon's visible body down so its top roughly
+    # matches the visible top of the SIZE_SMALL glyphs next to it.
+    #
+    # ``ELEMENT_ICON_INLINE_Y_OFFSET`` is the equivalent for icons
+    # that sit on the SIZE_BODY name line (battle enemy rows). The
+    # SIZE_BODY glyphs are taller and start even further below ``pos.y``
+    # (~12 px of top leading), so a larger nudge (~12) is needed for
+    # the icon's body to meet the visible name baseline rather than
+    # floating above it.
+    ELEMENT_ICON_SIZE = 16
+    ELEMENT_ICON_GAP = 4
+    ELEMENT_ICON_WORD_GAP = 6
+    ELEMENT_ICON_Y_OFFSET = 8
+    ELEMENT_ICON_INLINE_Y_OFFSET = 12
 
     # Width of the command panel on the left half of the bottom HUD
     # during a party member's turn. Sized so the divider clears the

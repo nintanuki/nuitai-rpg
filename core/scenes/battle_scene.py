@@ -52,7 +52,7 @@ from ui.layout import DebugOverlay, RosterRowLayout
 from ui.menu import Menu, MenuItem
 from ui.text_box import TextBox
 from utils.backgrounds import render_scene_background
-from utils.graphics import load_portrait
+from utils.graphics import load_element_icon, load_portrait
 
 if TYPE_CHECKING:
     from main import GameManager
@@ -68,11 +68,26 @@ _DEMO_ENEMY_IDS: tuple[str, ...] = (
 )
 
 _ROSTER_TOP_Y = 100
-# Match the party screen's looser row rhythm so name/HP and element
-# lines do not crowd each other or the next row.
-_ROSTER_ROW_HEIGHT = 60
+# Match the party screen's row rhythm so name/HP and element lines do
+# not crowd each other or the next row. 60 was too tight when icons
+# replaced words on the element line; 76 left too much air below the
+# icons. 64 lands the icon comfortably below the name and still leaves
+# ~12 px of clearance to the next row.
+_ROSTER_ROW_HEIGHT = 64
+# Horizontal start of the enemy column. The original ``WIDTH - 240``
+# was sized for "NAME hp/max" only; adding an inline element icon on
+# the same line eats ~22 px and was clipping the HP for longer enemy
+# names (e.g. "FIRE_ELEMENTAL 24/24"). ``WIDTH - 300`` was the first
+# correction but still clipped the trailing HP digit on the longest
+# names — the SIZE_BODY glyphs are wider than that estimate. ``WIDTH
+# - 340`` gives the icon-plus-name-plus-HP block enough slack so a
+# name like "FIRE ELEMENTAL 24/24" reads to its last character, and
+# also has the side benefit of nudging the inline element icon left
+# so it visually sits just inboard of the column rather than feeling
+# crammed against the right edge.
+_ENEMY_COLUMN_WIDTH = 340
 _PARTY_X = 40
-_ENEMY_X = ScreenSettings.WIDTH - 240
+_ENEMY_X = ScreenSettings.WIDTH - _ENEMY_COLUMN_WIDTH
 # NOTE: Per-row layout (portrait rect, name pos, element pos, target
 # glyph) lives in ``ui.layout.RosterRowLayout``. Party rows pass
 # ``has_portrait=True``; enemy rows pass False because enemies have no
@@ -417,12 +432,16 @@ class BattleScene(Scene):
         target: Combatant | None,
         cursor_visible: bool,
     ) -> None:
-        """Draw one combatant's roster row (portrait + name + element).
+        """Draw one combatant's roster row.
 
         Layout is delegated to ``RosterRowLayout`` — this method only
         decides *what* to draw and in what color. Party members get
-        portraits; enemies pass ``has_portrait=False`` and the layout
-        helper collapses the text column to the row's left edge.
+        portraits and a two-line block (name + element line below);
+        enemies pass ``has_portrait=False`` and render their (single)
+        element as an inline icon to the LEFT of the name on the same
+        line, with no element line below. The inline marker keeps the
+        enemy column visually compact and matches the party screen's
+        "icons replace words" rule.
         """
         row_y = _ROSTER_TOP_Y + index * _ROSTER_ROW_HEIGHT
         layout = RosterRowLayout(
@@ -451,32 +470,82 @@ class BattleScene(Scene):
                 DebugOverlay.COLOR_PORTRAIT,
             )
 
-        # Name + HP line.
+        # Name + HP line. Enemies prefix the line with an inline
+        # element icon (or, when an icon doesn't exist for that
+        # element yet, a small colored element word) so the affinity
+        # reads at the same glance as the name. Party members keep
+        # their name flush-left because their element line lives
+        # underneath the name on the row below.
+        name_x, name_y = layout.name_pos
+        if not combatant.is_party:
+            name_x = self._draw_inline_element_marker(
+                surface, combatant.element.value, (name_x, name_y),
+            )
         text_renderer.draw_text(
             surface,
             f"{combatant.name}  {combatant.hp}/{combatant.max_hp}",
-            layout.name_pos,
+            (name_x, name_y),
             color=color,
         )
         DebugOverlay.point(
             surface, layout.name_pos, "name", DebugOverlay.COLOR_TEXT,
         )
 
-        # Element line under the name. Party combatants look up the
-        # full element pair from the persistent PartyMember; enemies
-        # fall back to their single combatant-level element.
-        member = (
-            self.gm.party.find(combatant.id) if combatant.is_party else None
+        # Element line under the name -- party combatants only. Enemies
+        # already expressed their affinity inline (above), so they
+        # don't get a second line and the row stays single-height.
+        if combatant.is_party:
+            member = self.gm.party.find(combatant.id)
+            element_ids = (
+                member.elements if member is not None
+                else (combatant.element.value,)
+            )
+            self._render_element_line(
+                surface, element_ids, layout.element_pos,
+            )
+            DebugOverlay.point(
+                surface, layout.element_pos, "elements",
+                DebugOverlay.COLOR_TEXT,
+            )
+
+    def _draw_inline_element_marker(
+        self,
+        surface: pygame.Surface,
+        element_id: str,
+        pos: tuple[int, int],
+    ) -> int:
+        """Draw an inline element marker (icon if any, else word) at ``pos``.
+
+        Used by the battle enemy roster: a single element_id is drawn
+        directly before the combatant's name on the SIZE_BODY line so
+        the row reads "[icon] NAME hp/max". Falls back to the colored
+        element word when no icon file exists yet so the affinity is
+        never silently dropped.
+
+        Returns:
+            The X position immediately after the marker (icon width +
+            ``ELEMENT_ICON_WORD_GAP`` or word width + gap) so the
+            caller can chain the name onto the same line.
+        """
+        x, y = pos
+        icon = load_element_icon(element_id)
+        if icon is not None:
+            surface.blit(
+                icon, (x, y + UISettings.ELEMENT_ICON_INLINE_Y_OFFSET),
+            )
+            return x + UISettings.ELEMENT_ICON_SIZE + UISettings.ELEMENT_ICON_WORD_GAP
+        # Fallback: render the element word at SIZE_BODY so it sits
+        # cleanly on the name line.
+        style = ColorSettings.ELEMENT_TEXT_STYLES.get(
+            element_id, {"color": ColorSettings.WHITE}
         )
-        element_ids = (
-            member.elements if member is not None
-            else (combatant.element.value,)
+        text_renderer.draw_text(
+            surface, element_id, (x, y),
+            size=FontSettings.SIZE_BODY,
+            **style,
         )
-        self._render_element_line(surface, element_ids, layout.element_pos)
-        DebugOverlay.point(
-            surface, layout.element_pos, "elements",
-            DebugOverlay.COLOR_TEXT,
-        )
+        font = text_renderer.get_font(FontSettings.SIZE_BODY)
+        return x + font.size(element_id.upper())[0] + UISettings.ELEMENT_ICON_WORD_GAP
 
     def _render_element_line(
         self,
@@ -486,8 +555,19 @@ class BattleScene(Scene):
     ) -> None:
         """Draw a multi-color element-pair line starting at ``pos``.
 
-        Each element id is rendered in its accent color from
-        ``ColorSettings.ELEMENT_COLORS`` and separated by gray " + ".
+        Battle rows are icon-only: if an element has an icon under
+        ``assets/graphics/icons/<id>.png`` the icon is drawn in place of
+        the element word, matching the party-screen roster. Elements
+        that don't have icons yet (``lau``, ``mana``, ``ra``, ``aku``)
+        fall back to the colored word so partial art coverage degrades
+        gracefully. Entries are separated by a gray " + " so a player
+        with two affinities reads as two distinct entries rather than
+        one fused glyph.
+
+        Aku entries render with a white halo via the
+        ``ColorSettings.ELEMENT_TEXT_STYLES`` lookup so the lore-black
+        body stays readable against the battle background.
+
         Same shape as ``party_scene.PartyScene._render_element_line`` —
         if either drifts, fold them into a shared helper.
         """
@@ -498,12 +578,19 @@ class BattleScene(Scene):
             style = ColorSettings.ELEMENT_TEXT_STYLES.get(
                 element_id, {"color": ColorSettings.WHITE}
             )
-            text_renderer.draw_text(
-                surface, element_id, (x, y),
-                size=FontSettings.SIZE_SMALL,
-                **style,
-            )
-            x += font.size(element_id.upper())[0]
+            icon = load_element_icon(element_id)
+            if icon is not None:
+                surface.blit(
+                    icon, (x, y + UISettings.ELEMENT_ICON_Y_OFFSET)
+                )
+                x += UISettings.ELEMENT_ICON_SIZE
+            else:
+                text_renderer.draw_text(
+                    surface, element_id, (x, y),
+                    size=FontSettings.SIZE_SMALL,
+                    **style,
+                )
+                x += font.size(element_id.upper())[0]
             if i < len(element_ids) - 1:
                 text_renderer.draw_text(
                     surface, separator, (x, y),
